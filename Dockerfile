@@ -19,4 +19,4 @@ COPY --from=python-deps /usr/local/lib/python3.10/site-packages /usr/local/lib/p
 COPY requirements.txt $CONTAINER_HOME/requirements.txt
 COPY src/ $CONTAINER_HOME/
 
-CMD ["gunicorn", "app:app", "--bind", "0.0.0.0:5000" "--log-level", "debug"]
+CMD ["python", "-m", "gunicorn", "app:app", "--bind", "0.0.0.0:5000", "--log-level", "debug"]
