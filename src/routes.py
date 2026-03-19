@@ -34,9 +34,7 @@ def json_search(query):
 def register_routes(app):
     @app.route("/")
     def home():
-        if USE_LLM:
-            return render_template('chat.html')
-        return render_template('base.html')
+        return render_template("stockpulse.html")
 
     @app.route("/episodes")
     def episodes_search():

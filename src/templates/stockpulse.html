@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>StockPulse</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+        input, button {
+            padding: 10px;
+            font-size: 16px;
+        }
+        input {
+            width: 220px;
+        }
+        button {
+            cursor: pointer;
+            margin-left: 8px;
+        }
+        .card {
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 20px;
+        }
+        .post {
+            border-top: 1px solid #eee;
+            padding-top: 12px;
+            margin-top: 12px;
+        }
+        pre {
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <h1>StockPulse</h1>
+    <p>Analyze stock sentiment from discussion posts.</p>
+
+    <input id="tickerInput" type="text" placeholder="Enter ticker, e.g. AAPL">
+    <button onclick="analyzeTicker()">Analyze</button>
+
+    <div id="result" class="card" style="display:none;"></div>
+
+    <script>
+        async function analyzeTicker() {
+            const ticker = document.getElementById("tickerInput").value.trim().toUpperCase();
+            const resultDiv = document.getElementById("result");
+
+            if (!ticker) {
+                alert("Please enter a ticker.");
+                return;
+            }
+
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = "<p>Loading...</p>";
+
+            try {
+                const response = await fetch("/api/stock/analyze", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        ticker: ticker,
+                        top_k: 5
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    resultDiv.innerHTML = `<p><strong>Error:</strong> ${data.error || "Unknown error"}</p>`;
+                    return;
+                }
+
+                let html = `
+                    <h2>${data.ticker}</h2>
+                    <p><strong>Label:</strong> ${data.label}</p>
+                    <p><strong>Score (0-100):</strong> ${data.score_0_to_100 ?? "N/A"}</p>
+                    <p><strong>Average Sentiment:</strong> ${data.avg_sentiment ?? "N/A"}</p>
+                    <p><strong>Posts Used:</strong> ${data.posts_used}</p>
+                    <h3>Top Matching Posts</h3>
+                `;
+
+                if (data.top_posts && data.top_posts.length > 0) {
+                    data.top_posts.forEach((post, index) => {
+                        html += `
+                            <div class="post">
+                                <p><strong>${index + 1}. ${post.title || "Untitled Post"}</strong></p>
+                                <p>${post.body || ""}</p>
+                                <p><strong>Sentiment:</strong> ${post.text_sentiment}</p>
+                                <p><strong>Ticker relevance:</strong> ${post.ticker_relevance}</p>
+                                <p><strong>Score:</strong> ${post.score}</p>
+                                <p><strong>Comments:</strong> ${post.comms_num}</p>
+                                ${post.url ? `<p><a href="${post.url}" target="_blank">Open post</a></p>` : ""}
+                            </div>
+                        `;
+                    });
+                } else {
+                    html += "<p>No posts found.</p>";
+                }
+
+                resultDiv.innerHTML = html;
+            } catch (err) {
+                resultDiv.innerHTML = `<p><strong>Error:</strong> ${err}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>
