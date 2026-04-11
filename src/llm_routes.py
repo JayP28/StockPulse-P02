@@ -1,55 +1,59 @@
 """
-LLM chat route — only loaded when USE_LLM = True in routes.py.
-Adds a POST /chat endpoint that performs LLM-driven RAG.
+LLM chat route — optional.
+Adds a POST /chat endpoint that performs LLM-grounded Q&A over StockPulse results.
 
 Setup:
   1. Add API_KEY=your_key to .env
-  2. Set USE_LLM = True in routes.py
+  2. Wire register_chat_route(app, model) in app.py if desired
 """
 import json
+import logging
 import os
 import re
-import logging
-from flask import request, jsonify, Response, stream_with_context
+
+from flask import Response, jsonify, request, stream_with_context
 from infosci_spark_client import LLMClient
 
 logger = logging.getLogger(__name__)
 
 
 def llm_search_decision(client, user_message):
-    """Ask the LLM whether to search the DB and which word to use."""
+    """
+    Ask the LLM if a stock analysis lookup is needed, and if so which ticker.
+    """
     messages = [
         {
             "role": "system",
             "content": (
-                "You have access to a database of Keeping Up with the Kardashians episode titles, "
-                "descriptions, and IMDB ratings. Search is by a single word in the episode title. "
-                "Reply with exactly: YES followed by one space and ONE word to search (e.g. YES wedding), "
-                "or NO if the question does not need episode data."
+                "You are routing questions for a stock sentiment app. "
+                "If the user is asking about a specific stock, reply exactly: "
+                "YES followed by one ticker symbol, for example: YES AAPL. "
+                "If not, reply exactly: NO."
             ),
         },
         {"role": "user", "content": user_message},
     ]
+
     response = client.chat(messages)
     content = (response.get("content") or "").strip().upper()
-    logger.info(f"LLM search decision: {content}")
-    if re.search(r"\bNO\b", content) and not re.search(r"\bYES\b", content):
+    logger.info("LLM search decision: %s", content)
+
+    if re.fullmatch(r"NO\.?", content):
         return False, None
-    yes_match = re.search(r"\bYES\s+(\w+)", content)
-    if yes_match:
-        return True, yes_match.group(1).lower()
-    if re.search(r"\bYES\b", content):
-        return True, "Kardashian"
+
+    match = re.search(r"\bYES\s+([A-Z.$]{1,10})\b", content)
+    if match:
+        return True, match.group(1).replace("$", "")
+
     return False, None
 
 
-def register_chat_route(app, json_search):
-    """Register the /chat SSE endpoint. Called from routes.py."""
-
+def register_chat_route(app, model):
     @app.route("/chat", methods=["POST"])
     def chat():
         data = request.get_json() or {}
         user_message = (data.get("message") or "").strip()
+
         if not user_message:
             return jsonify({"error": "Message is required"}), 400
 
@@ -58,39 +62,50 @@ def register_chat_route(app, json_search):
             return jsonify({"error": "API_KEY not set — add it to your .env file"}), 500
 
         client = LLMClient(api_key=api_key)
-        use_search, search_term = llm_search_decision(client, user_message)
+        use_search, ticker = llm_search_decision(client, user_message)
 
-        if use_search:
-            episodes = json.loads(json_search(search_term or "Kardashian"))
-            context_text = "\n\n---\n\n".join(
-                f"Title: {ep['title']}\nDescription: {ep['descr']}\nIMDB Rating: {ep['imdb_rating']}"
-                for ep in episodes
-            ) or "No matching episodes found."
+        if use_search and ticker:
+            result = model.analyze_ticker(ticker, top_k=5)
+            context_text = json.dumps(result, indent=2)
             messages = [
-                {"role": "system", "content": "Answer questions about Keeping Up with the Kardashians using only the episode information provided."},
-                {"role": "user", "content": f"Episode information:\n\n{context_text}\n\nUser question: {user_message}"},
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a stock sentiment assistant. "
+                        "Use only the provided StockPulse analysis and snippets. "
+                        "Do not invent outside facts."
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": (
+                        f"StockPulse analysis:\n{context_text}\n\n"
+                        f"User question: {user_message}"
+                    ),
+                },
             ]
         else:
             messages = [
-                {"role": "system", "content": "You are a helpful assistant for Keeping Up with the Kardashians questions."},
+                {
+                    "role": "system",
+                    "content": "You are a helpful assistant for the StockPulse app.",
+                },
                 {"role": "user", "content": user_message},
             ]
 
         def generate():
-            if use_search and search_term:
-                yield f"data: {json.dumps({'search_term': search_term})}\n\n"
+            if use_search and ticker:
+                yield f"data: {json.dumps({'ticker': ticker})}\n\n"
             try:
                 for chunk in client.chat(messages, stream=True):
                     if chunk.get("content"):
                         yield f"data: {json.dumps({'content': chunk['content']})}\n\n"
-            except Exception as e:
-                logger.error(f"Streaming error: {e}")
+            except Exception as exc:
+                logger.error("Streaming error: %s", exc)
                 yield f"data: {json.dumps({'error': 'Streaming error occurred'})}\n\n"
 
         return Response(
-            # Stream the response to the client ("stream_with_context" is from Flask)
             stream_with_context(generate()),
             mimetype="text/event-stream",
-            # Set this to prevent the browser from caching the response
             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
         )

@@ -1,115 +1,395 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <meta charset="utf-8">
-    <title>StockPulse</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 900px;
-            margin: 40px auto;
-            padding: 0 20px;
-        }
-        input, button {
-            padding: 10px;
-            font-size: 16px;
-        }
-        input {
-            width: 220px;
-        }
-        button {
-            cursor: pointer;
-            margin-left: 8px;
-        }
-        .card {
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            padding: 16px;
-            margin-top: 20px;
-        }
-        .post {
-            border-top: 1px solid #eee;
-            padding-top: 12px;
-            margin-top: 12px;
-        }
-        pre {
-            white-space: pre-wrap;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <title>StockPulse</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      margin: 0;
+      padding: 0;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 32px 20px 60px;
+    }
+
+    h1, h2, h3 {
+      margin-top: 0;
+    }
+
+    .subtitle {
+      color: #94a3b8;
+      margin-bottom: 28px;
+    }
+
+    .card {
+      background: #111827;
+      border: 1px solid #1f2937;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    input, select, button {
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid #334155;
+      background: #0b1220;
+      color: #e2e8f0;
+      font-size: 14px;
+    }
+
+    button {
+      cursor: pointer;
+      background: #2563eb;
+      border: none;
+    }
+
+    button:hover {
+      background: #1d4ed8;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .metric {
+      background: #0b1220;
+      border: 1px solid #1f2937;
+      border-radius: 10px;
+      padding: 14px;
+    }
+
+    .metric-label {
+      color: #94a3b8;
+      font-size: 12px;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .metric-value {
+      font-size: 22px;
+      font-weight: bold;
+    }
+
+    .bullish { color: #22c55e; }
+    .bearish { color: #ef4444; }
+    .neutral { color: #f59e0b; }
+
+    .post {
+      padding: 16px;
+      border: 1px solid #1f2937;
+      border-radius: 10px;
+      margin-top: 14px;
+      background: #0b1220;
+    }
+
+    .post-title {
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+
+    .post-snippet {
+      color: #cbd5e1;
+      margin-bottom: 10px;
+      line-height: 1.5;
+    }
+
+    .small {
+      font-size: 13px;
+      color: #94a3b8;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+    }
+
+    th, td {
+      padding: 10px;
+      border-bottom: 1px solid #1f2937;
+      text-align: left;
+      font-size: 14px;
+    }
+
+    .method-list {
+      margin: 8px 0 0 20px;
+      color: #cbd5e1;
+    }
+
+    a {
+      color: #60a5fa;
+    }
+
+    .loading {
+      color: #93c5fd;
+      margin-top: 10px;
+    }
+
+    .error {
+      color: #fca5a5;
+      margin-top: 10px;
+    }
+  </style>
 </head>
 <body>
+  <div class="container">
     <h1>StockPulse</h1>
-    <p>Analyze stock sentiment from discussion posts.</p>
+    <p class="subtitle">
+      Sentence-level information retrieval and sentiment analysis for stock discussion on Reddit.
+      Retrieval uses TF-IDF + SVD, and sentiment is scored on the sentence containing the ticker.
+    </p>
 
-    <input id="tickerInput" type="text" placeholder="Enter ticker, e.g. AAPL">
-    <button onclick="analyzeTicker()">Analyze</button>
+    <div class="card">
+      <h2>Analyze a Stock</h2>
+      <div class="row">
+        <input id="tickerInput" type="text" placeholder="Enter ticker, e.g. AAPL" />
+        <select id="topKSelect">
+          <option value="3">Top 3 snippets</option>
+          <option value="5" selected>Top 5 snippets</option>
+          <option value="10">Top 10 snippets</option>
+        </select>
+        <button id="analyzeBtn">Analyze</button>
+        <button id="loadRankingsBtn">Load Rankings</button>
+      </div>
+      <div id="status"></div>
+    </div>
 
-    <div id="result" class="card" style="display:none;"></div>
+    <div id="analysisCard" class="card" style="display:none;">
+      <h2 id="analysisHeader">Analysis</h2>
+      <div id="metrics" class="metrics"></div>
+      <div id="topPosts"></div>
+    </div>
 
-    <script>
-        async function analyzeTicker() {
-            const ticker = document.getElementById("tickerInput").value.trim().toUpperCase();
-            const resultDiv = document.getElementById("result");
+    <div id="rankingsCard" class="card" style="display:none;">
+      <h2>Top Ranked Stocks</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Ticker</th>
+            <th>Label</th>
+            <th>Score</th>
+            <th>Avg Sentiment</th>
+            <th>Posts Used</th>
+          </tr>
+        </thead>
+        <tbody id="rankingsTableBody"></tbody>
+      </table>
+    </div>
 
-            if (!ticker) {
-                alert("Please enter a ticker.");
-                return;
-            }
+    <div id="methodologyCard" class="card">
+      <h2>How the Score Is Determined</h2>
+      <div id="methodologyContent">Loading methodology...</div>
+    </div>
+  </div>
 
-            resultDiv.style.display = "block";
-            resultDiv.innerHTML = "<p>Loading...</p>";
+  <script>
+    const tickerInput = document.getElementById("tickerInput");
+    const topKSelect = document.getElementById("topKSelect");
+    const analyzeBtn = document.getElementById("analyzeBtn");
+    const loadRankingsBtn = document.getElementById("loadRankingsBtn");
+    const statusDiv = document.getElementById("status");
 
-            try {
-                const response = await fetch("/api/stock/analyze", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({
-                        ticker: ticker,
-                        top_k: 5
-                    })
-                });
+    const analysisCard = document.getElementById("analysisCard");
+    const analysisHeader = document.getElementById("analysisHeader");
+    const metricsDiv = document.getElementById("metrics");
+    const topPostsDiv = document.getElementById("topPosts");
 
-                const data = await response.json();
+    const rankingsCard = document.getElementById("rankingsCard");
+    const rankingsTableBody = document.getElementById("rankingsTableBody");
 
-                if (!response.ok) {
-                    resultDiv.innerHTML = `<p><strong>Error:</strong> ${data.error || "Unknown error"}</p>`;
-                    return;
-                }
+    const methodologyContent = document.getElementById("methodologyContent");
 
-                let html = `
-                    <h2>${data.ticker}</h2>
-                    <p><strong>Label:</strong> ${data.label}</p>
-                    <p><strong>Score (0-100):</strong> ${data.score_0_to_100 ?? "N/A"}</p>
-                    <p><strong>Average Sentiment:</strong> ${data.avg_sentiment ?? "N/A"}</p>
-                    <p><strong>Posts Used:</strong> ${data.posts_used}</p>
-                    <h3>Top Matching Posts</h3>
-                `;
+    function setStatus(message, type = "loading") {
+      statusDiv.className = type;
+      statusDiv.textContent = message;
+    }
 
-                if (data.top_posts && data.top_posts.length > 0) {
-                    data.top_posts.forEach((post, index) => {
-                        html += `
-                            <div class="post">
-                                <p><strong>${index + 1}. ${post.title || "Untitled Post"}</strong></p>
-                                <p>${post.body || ""}</p>
-                                <p><strong>Sentiment:</strong> ${post.text_sentiment}</p>
-                                <p><strong>Ticker relevance:</strong> ${post.ticker_relevance}</p>
-                                <p><strong>Score:</strong> ${post.score}</p>
-                                <p><strong>Comments:</strong> ${post.comms_num}</p>
-                                ${post.url ? `<p><a href="${post.url}" target="_blank">Open post</a></p>` : ""}
-                            </div>
-                        `;
-                    });
-                } else {
-                    html += "<p>No posts found.</p>";
-                }
+    function labelClass(label) {
+      const value = (label || "").toLowerCase();
+      if (value.includes("bull")) return "bullish";
+      if (value.includes("bear")) return "bearish";
+      return "neutral";
+    }
 
-                resultDiv.innerHTML = html;
-            } catch (err) {
-                resultDiv.innerHTML = `<p><strong>Error:</strong> ${err}</p>`;
-            }
+    function metricCard(label, value, className = "") {
+      return `
+        <div class="metric">
+          <div class="metric-label">${label}</div>
+          <div class="metric-value ${className}">${value}</div>
+        </div>
+      `;
+    }
+
+    function renderAnalysis(data) {
+      analysisCard.style.display = "block";
+      analysisHeader.textContent = `${data.ticker} Analysis`;
+
+      const labelCls = labelClass(data.label);
+
+      metricsDiv.innerHTML = `
+        ${metricCard("Label", data.label, labelCls)}
+        ${metricCard("Score (0-100)", data.score_0_to_100 ?? "N/A")}
+        ${metricCard("Average Sentiment", data.avg_sentiment ?? "N/A")}
+        ${metricCard("Posts Used", data.posts_used ?? 0)}
+        ${metricCard("Coverage", data.summary_metrics?.coverage ?? "N/A")}
+        ${metricCard("Avg Retrieval", data.summary_metrics?.average_retrieval ?? "N/A")}
+        ${metricCard("Avg Confidence", data.summary_metrics?.average_confidence ?? "N/A")}
+        ${metricCard("Disagreement Penalty", data.summary_metrics?.disagreement_penalty ?? "N/A")}
+      `;
+
+      const posts = data.top_posts || [];
+      if (!posts.length) {
+        topPostsDiv.innerHTML = "<h3>Top Retrieved Evidence</h3><p>No snippets found.</p>";
+        return;
+      }
+
+      topPostsDiv.innerHTML = `
+        <h3>Top Retrieved Evidence</h3>
+        ${posts.map(post => `
+          <div class="post">
+            <div class="post-title">${post.title}</div>
+            <div class="post-snippet">${post.snippet}</div>
+            <div class="small">
+              Sentiment: ${post.sentence_sentiment} |
+              Confidence: ${post.sentiment_confidence} |
+              Retrieval: ${post.retrieval_score} |
+              Upvotes: ${post.score} |
+              Comments: ${post.comms_num} |
+              Source: ${post.source_part}
+            </div>
+            ${post.url ? `<div class="small" style="margin-top:8px;"><a href="${post.url}" target="_blank">Open source post</a></div>` : ""}
+          </div>
+        `).join("")}
+      `;
+    }
+
+    function renderRankings(rows) {
+      rankingsCard.style.display = "block";
+      rankingsTableBody.innerHTML = rows.map(row => `
+        <tr>
+          <td>${row.ticker}</td>
+          <td class="${labelClass(row.label)}">${row.label}</td>
+          <td>${row.score_0_to_100}</td>
+          <td>${row.avg_sentiment}</td>
+          <td>${row.posts_used}</td>
+        </tr>
+      `).join("");
+    }
+
+    function renderMethodology(methodology) {
+      methodologyContent.innerHTML = `
+        <h3>Retrieval</h3>
+        <p>${methodology.retrieval.summary}</p>
+        <ul class="method-list">
+          ${methodology.retrieval.details.map(item => `<li>${item}</li>`).join("")}
+        </ul>
+
+        <h3>Sentiment</h3>
+        <p>${methodology.sentiment.summary}</p>
+        <ul class="method-list">
+          ${methodology.sentiment.details.map(item => `<li>${item}</li>`).join("")}
+        </ul>
+
+        <h3>Stock Score</h3>
+        <p>${methodology.stock_score.summary}</p>
+        <ul class="method-list">
+          ${methodology.stock_score.details.map(item => `<li>${item}</li>`).join("")}
+        </ul>
+
+        <h3>Formula Summary</h3>
+        <ul class="method-list">
+          <li><strong>Sentence Evidence Weight:</strong> ${methodology.stock_score.formula.sentence_evidence_weight}</li>
+          <li><strong>Retrieval Score:</strong> ${methodology.stock_score.formula.retrieval_score}</li>
+          <li><strong>Raw Stock Score:</strong> ${methodology.stock_score.formula.stock_raw_score}</li>
+          <li><strong>Final 0-100 Score:</strong> ${methodology.stock_score.formula.final_score_0_to_100}</li>
+        </ul>
+      `;
+    }
+
+    async function loadMethodology() {
+      try {
+        const res = await fetch("/api/stock/methodology");
+        const data = await res.json();
+        renderMethodology(data);
+      } catch (err) {
+        methodologyContent.innerHTML = "<p>Failed to load methodology.</p>";
+      }
+    }
+
+    async function analyzeTicker() {
+      const ticker = tickerInput.value.trim().toUpperCase();
+      const topK = parseInt(topKSelect.value, 10);
+
+      if (!ticker) {
+        setStatus("Please enter a ticker.", "error");
+        return;
+      }
+
+      setStatus("Analyzing ticker...");
+      analysisCard.style.display = "none";
+
+      try {
+        const res = await fetch("/api/stock/analyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ticker, top_k: topK }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          setStatus(data.error || "Request failed.", "error");
+          return;
         }
-    </script>
+
+        renderAnalysis(data);
+        setStatus(`Loaded analysis for ${ticker}.`, "loading");
+      } catch (err) {
+        setStatus("Failed to analyze ticker.", "error");
+      }
+    }
+
+    async function loadRankings() {
+      setStatus("Loading rankings...");
+      try {
+        const res = await fetch("/api/stock/rankings?top_k=25");
+        const data = await res.json();
+
+        if (!res.ok) {
+          setStatus(data.error || "Failed to load rankings.", "error");
+          return;
+        }
+
+        renderRankings(data);
+        setStatus("Loaded top rankings.", "loading");
+      } catch (err) {
+        setStatus("Failed to load rankings.", "error");
+      }
+    }
+
+    analyzeBtn.addEventListener("click", analyzeTicker);
+    loadRankingsBtn.addEventListener("click", loadRankings);
+
+    loadMethodology();
+  </script>
 </body>
 </html>

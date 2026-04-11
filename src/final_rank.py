@@ -2,38 +2,52 @@ import math
 import os
 import re
 from functools import lru_cache
+from typing import Dict, List, Any
 
+import numpy as np
 import pandas as pd
+from sklearn.decomposition import TruncatedSVD
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import Normalizer
 
 
 class StockPulseSentiment:
-    def __init__(self, csv_path, alias_map):
-        self.df = pd.read_csv(csv_path)
-        print("DEBUG csv_path:", csv_path)
-        print("DEBUG file exists:", os.path.exists(csv_path))
-        print("DEBUG loaded rows:", len(self.df))
-        print("DEBUG columns:", list(self.df.columns))
-        self.alias_map = {k.upper(): v for k, v in alias_map.items()}
+    """
+    Sentence-level stock IR + sentiment model.
 
-        if "title" not in self.df.columns:
-            self.df["title"] = ""
-        if "body" not in self.df.columns:
-            self.df["body"] = ""
-        if "url" not in self.df.columns:
-            self.df["url"] = ""
+    Core design:
+    - Build a sentence corpus from Reddit title/body text
+    - Keep only sentences that actually mention supported tickers/aliases
+    - Retrieve relevant sentences with TF-IDF and latent semantic retrieval (SVD)
+    - Score sentiment on the sentence where the ticker appears
+    - Aggregate sentence evidence into post-level and ticker-level results
+    """
+
+    def __init__(self, csv_path: str, alias_map: Dict[str, List[str]]):
+        self.df = pd.read_csv(csv_path)
+        self.alias_map = {k.upper(): v for k, v in alias_map.items()}
+        self.supported_tickers = list(self.alias_map.keys())
+
+        # Normalize expected columns
+        for col in ["title", "body", "url"]:
+            if col not in self.df.columns:
+                self.df[col] = ""
 
         self.df["title"] = self.df["title"].fillna("").astype(str)
         self.df["body"] = self.df["body"].fillna("").astype(str)
-        self.df["score"] = pd.to_numeric(
-            self.df.get("score", 0), errors="coerce"
-        ).fillna(0)
-        self.df["comms_num"] = pd.to_numeric(
-            self.df.get("comms_num", 0), errors="coerce"
-        ).fillna(0)
+        self.df["url"] = self.df["url"].fillna("").astype(str)
 
-        self.df["combined_text"] = (
-            self.df["title"] + " " + self.df["body"]
-        ).str.strip()
+        self.df["score"] = pd.to_numeric(self.df.get("score", 0), errors="coerce").fillna(0)
+        self.df["comms_num"] = pd.to_numeric(self.df.get("comms_num", 0), errors="coerce").fillna(0)
+
+        # Optional time field support
+        self.time_col = None
+        for candidate in ["created_utc", "timestamp", "created_at", "date"]:
+            if candidate in self.df.columns:
+                self.time_col = candidate
+                break
 
         self.word_scores = {
             "bull": 1.4,
@@ -55,6 +69,11 @@ class StockPulseSentiment:
             "squeeze": 1.4,
             "hold": 0.4,
             "hodl": 0.8,
+            "upgrade": 1.4,
+            "outperform": 1.5,
+            "strong": 0.7,
+            "great": 0.6,
+            "winner": 1.3,
             "bear": -1.4,
             "bearish": -2.0,
             "sell": -1.3,
@@ -76,6 +95,10 @@ class StockPulseSentiment:
             "plunge": -1.8,
             "tank": -1.8,
             "tanking": -1.8,
+            "weak": -0.8,
+            "terrible": -1.3,
+            "awful": -1.4,
+            "loser": -1.5,
         }
 
         self.phrase_scores = {
@@ -91,31 +114,66 @@ class StockPulseSentiment:
             "price target cut": -1.8,
             "dead cat bounce": -1.8,
             "sell the rip": -1.4,
+            "load the boat": 1.8,
+            "strong buy": 2.2,
+            "hard pass": -1.5,
         }
 
         self.negations = {
-            "not",
-            "no",
-            "never",
-            "isnt",
-            "wasnt",
-            "dont",
-            "doesnt",
-            "cant",
-            "wont",
+            "not", "no", "never", "isnt", "wasnt", "dont", "doesnt", "cant", "wont", "ain't"
         }
 
-    def _clean_text(self, text):
-        text = str(text).lower()
+        self._ticker_to_patterns = {
+            ticker: self._ticker_patterns(ticker) for ticker in self.supported_tickers
+        }
+
+        self.sentence_df = self._build_sentence_corpus()
+
+        if self.sentence_df.empty:
+            raise ValueError(
+                "No ticker-containing sentences were found in the dataset. "
+                "Check prototype_posts.csv and alias coverage."
+            )
+
+        self.vectorizer, self.doc_tfidf, self.svd_model, self.doc_lsi = self._fit_retrieval_models()
+
+    def _clean_text(self, text: str) -> str:
+        text = str(text)
         text = re.sub(r"http\S+|www\.\S+", " ", text)
         text = text.replace("🚀", " rocket ")
         text = text.replace("🟢", " green ")
         text = text.replace("🔴", " red ")
-        text = re.sub(r"[^a-z0-9$!\s]", " ", text)
+        text = text.replace("📈", " bullish ")
+        text = text.replace("📉", " bearish ")
+        text = text.replace("&amp;", "and")
         text = re.sub(r"\s+", " ", text).strip()
         return text
 
-    def _ticker_patterns(self, ticker):
+    def _normalize_for_vectorizer(self, text: str) -> str:
+        text = self._clean_text(text).lower()
+        text = re.sub(r"[^a-z0-9$.\-+\s]", " ", text)
+        text = re.sub(r"\s+", " ", text).strip()
+        return text
+
+    def _split_sentences(self, text: str) -> List[str]:
+        text = self._clean_text(text)
+        if not text:
+            return []
+
+        text = re.sub(r"\s+", " ", text).strip()
+        parts = re.split(r"(?<=[.!?])\s+|\n+", text)
+        parts = [p.strip() for p in parts if p and p.strip()]
+
+        cleaned = []
+        for sent in parts:
+            sent = sent.strip(" -•\t")
+            if len(sent) < 6:
+                continue
+            cleaned.append(sent)
+
+        return cleaned
+
+    def _ticker_patterns(self, ticker: str) -> List[re.Pattern]:
         aliases = self.alias_map.get(ticker.upper(), [ticker.upper()])
         patterns = []
 
@@ -126,62 +184,150 @@ class StockPulseSentiment:
 
             if alias.startswith("$"):
                 raw = alias[1:]
-                patterns.append(
-                    re.compile(
-                        rf"(?<![A-Z])\$?{re.escape(raw)}(?![A-Z])",
-                        re.IGNORECASE,
+                if raw:
+                    patterns.append(
+                        re.compile(rf"(?<![A-Za-z0-9])\$?{re.escape(raw)}(?![A-Za-z0-9])", re.IGNORECASE)
                     )
-                )
-            elif alias.isupper() and len(alias) <= 5:
+            elif alias.isupper() and len(alias) <= 6:
                 patterns.append(
-                    re.compile(
-                        rf"(?<![A-Z])\$?{re.escape(alias)}(?![A-Z])",
-                        re.IGNORECASE,
-                    )
+                    re.compile(rf"(?<![A-Za-z0-9])\$?{re.escape(alias)}(?![A-Za-z0-9])", re.IGNORECASE)
                 )
             else:
-                patterns.append(
-                    re.compile(rf"\b{re.escape(alias.lower())}\b", re.IGNORECASE)
-                )
+                patterns.append(re.compile(rf"\b{re.escape(alias)}\b", re.IGNORECASE))
 
         return patterns
 
-    def _matches_ticker(self, row, ticker):
-        patterns = self._ticker_patterns(ticker)
-        for pat in patterns:
-            if pat.search(row["title"]) or pat.search(row["body"]):
+    def _sentence_mentions_ticker(self, sentence: str, ticker: str) -> bool:
+        for pat in self._ticker_to_patterns[ticker]:
+            if pat.search(sentence):
                 return True
         return False
 
-    def _ticker_relevance(self, row, ticker):
-        patterns = self._ticker_patterns(ticker)
-        title_hits = 0
-        body_hits = 0
+    def _extract_mentioned_tickers(self, sentence: str) -> List[str]:
+        tickers = []
+        for ticker in self.supported_tickers:
+            if self._sentence_mentions_ticker(sentence, ticker):
+                tickers.append(ticker)
+        return tickers
 
-        for pat in patterns:
-            if pat.search(row["title"]):
-                title_hits += 1
-            if pat.search(row["body"]):
-                body_hits += 1
+    def _count_ticker_mentions(self, text: str, ticker: str) -> int:
+        count = 0
+        for pat in self._ticker_to_patterns[ticker]:
+            count += len(pat.findall(text))
+        return count
 
-        if title_hits == 0 and body_hits == 0:
-            return 0.0
+    def _make_query_text(self, ticker: str) -> str:
+        aliases = self.alias_map.get(ticker.upper(), [ticker.upper()])
+        unique_aliases = []
+        seen = set()
 
-        relevance = 1.0
-        if title_hits > 0:
-            relevance += 0.8
-        if body_hits > 0:
-            relevance += 0.4
-        relevance += 0.15 * min(title_hits + body_hits, 3)
-        return relevance
+        for alias in aliases:
+            norm = alias.strip().lower()
+            if norm and norm not in seen:
+                seen.add(norm)
+                unique_aliases.append(alias)
 
-    def _text_sentiment(self, text):
-        text = self._clean_text(text)
+        query_terms = " ".join(unique_aliases)
+        return self._normalize_for_vectorizer(query_terms)
+
+    def _build_sentence_corpus(self) -> pd.DataFrame:
+        records = []
+
+        for idx, row in self.df.iterrows():
+            title = self._clean_text(row["title"])
+            body = self._clean_text(row["body"])
+            url = str(row["url"]).strip()
+            score = float(row["score"])
+            comms_num = float(row["comms_num"])
+
+            title_sentences = self._split_sentences(title)
+            body_sentences = self._split_sentences(body)
+
+            all_sentences = []
+            for sent in title_sentences:
+                all_sentences.append(("title", sent))
+            for sent in body_sentences:
+                all_sentences.append(("body", sent))
+
+            if not all_sentences:
+                continue
+
+            for source_part, sentence in all_sentences:
+                mentioned = self._extract_mentioned_tickers(sentence)
+                if not mentioned:
+                    continue
+
+                vector_text = self._normalize_for_vectorizer(sentence)
+                if not vector_text:
+                    continue
+
+                full_post_text = f"{title} {body}".strip()
+
+                records.append(
+                    {
+                        "post_id": int(idx),
+                        "source_part": source_part,
+                        "sentence": sentence,
+                        "vector_text": vector_text,
+                        "title": title,
+                        "body": body,
+                        "full_post_text": full_post_text,
+                        "mentioned_tickers": mentioned,
+                        "score": score,
+                        "comms_num": comms_num,
+                        "url": url,
+                        "time_value": row[self.time_col] if self.time_col else None,
+                    }
+                )
+
+        sentence_df = pd.DataFrame(records)
+
+        if sentence_df.empty:
+            return sentence_df
+
+        sentence_df = sentence_df.drop_duplicates(
+            subset=["post_id", "sentence"]
+        ).reset_index(drop=True)
+
+        return sentence_df
+
+    def _fit_retrieval_models(self):
+        vectorizer = TfidfVectorizer(
+            lowercase=True,
+            stop_words="english",
+            ngram_range=(1, 2),
+            min_df=1,
+            max_df=0.92,
+            sublinear_tf=True,
+        )
+
+        doc_tfidf = vectorizer.fit_transform(self.sentence_df["vector_text"])
+
+        n_features = doc_tfidf.shape[1]
+        n_docs = doc_tfidf.shape[0]
+        svd_dim = max(2, min(100, n_features - 1, n_docs - 1))
+
+        if svd_dim < 2:
+            svd_dim = 2
+
+        svd_model = make_pipeline(
+            TruncatedSVD(n_components=svd_dim, random_state=42),
+            Normalizer(copy=False),
+        )
+
+        doc_lsi = svd_model.fit_transform(doc_tfidf)
+
+        return vectorizer, doc_tfidf, svd_model, doc_lsi
+
+    def _text_sentiment(self, text: str):
+        text = self._normalize_for_vectorizer(text)
         score = 0.0
+        matched_terms = 0
 
         for phrase, value in self.phrase_scores.items():
             if phrase in text:
                 score += value
+                matched_terms += 1
 
         tokens = text.split()
 
@@ -197,18 +343,105 @@ class StockPulseSentiment:
                 val *= -0.8
 
             score += val
+            matched_terms += 1
 
         exclam_bonus = min(text.count("!"), 4) * 0.08
         score *= 1.0 + exclam_bonus
 
-        return math.tanh(score / 4.0)
+        normalized = math.tanh(score / 4.0)
+        confidence = min(1.0, 0.25 + 0.18 * matched_terms + 0.35 * abs(normalized))
 
-    def _engagement_weight(self, row):
-        score_part = 0.18 * math.log1p(max(row["score"], 0))
-        comment_part = 0.12 * math.log1p(max(row["comms_num"], 0))
+        return float(normalized), float(confidence), int(matched_terms)
+
+    def _engagement_weight(self, row: pd.Series) -> float:
+        score_part = 0.22 * math.log1p(max(float(row["score"]), 0))
+        comment_part = 0.15 * math.log1p(max(float(row["comms_num"]), 0))
         return 1.0 + score_part + comment_part
 
-    def analyze_ticker(self, ticker, top_k=5):
+    def _mention_prominence(self, row: pd.Series, ticker: str) -> float:
+        sentence_hits = self._count_ticker_mentions(row["sentence"], ticker)
+        title_hits = self._count_ticker_mentions(row["title"], ticker)
+        part_bonus = 0.25 if row["source_part"] == "title" else 0.0
+
+        prominence = 1.0
+        prominence += 0.18 * min(sentence_hits, 3)
+        prominence += 0.10 * min(title_hits, 2)
+        prominence += part_bonus
+        return prominence
+
+    def _recency_weight(self, row: pd.Series) -> float:
+        if self.time_col is None:
+            return 1.0
+
+        val = row["time_value"]
+        if val is None or (isinstance(val, float) and pd.isna(val)):
+            return 1.0
+
+        try:
+            if self.time_col == "created_utc":
+                ts = pd.to_datetime(float(val), unit="s", utc=True)
+            else:
+                ts = pd.to_datetime(val, utc=True, errors="coerce")
+            if pd.isna(ts):
+                return 1.0
+        except Exception:
+            return 1.0
+
+        newest = None
+        try:
+            if self.time_col == "created_utc":
+                newest = pd.to_datetime(
+                    pd.to_numeric(self.df[self.time_col], errors="coerce").max(),
+                    unit="s",
+                    utc=True,
+                )
+            else:
+                newest = pd.to_datetime(self.df[self.time_col], utc=True, errors="coerce").max()
+        except Exception:
+            return 1.0
+
+        if newest is None or pd.isna(newest):
+            return 1.0
+
+        age_days = max((newest - ts).total_seconds() / 86400.0, 0.0)
+        return 1.0 / (1.0 + 0.015 * age_days)
+
+    def _retrieve_sentences_for_ticker(self, ticker: str) -> pd.DataFrame:
+        ticker = ticker.upper().strip()
+        if ticker not in self.alias_map:
+            return pd.DataFrame()
+
+        subset = self.sentence_df[
+            self.sentence_df["mentioned_tickers"].apply(lambda xs: ticker in xs)
+        ].copy()
+
+        if subset.empty:
+            return subset
+
+        query_text = self._make_query_text(ticker)
+        query_tfidf = self.vectorizer.transform([query_text])
+        query_lsi = self.svd_model.transform(query_tfidf)
+
+        tfidf_sim_all = cosine_similarity(query_tfidf, self.doc_tfidf).flatten()
+        lsi_sim_all = cosine_similarity(query_lsi, self.doc_lsi).flatten()
+
+        subset["tfidf_similarity"] = tfidf_sim_all[subset.index]
+        subset["svd_similarity"] = lsi_sim_all[subset.index]
+
+        subset["retrieval_score"] = (
+            0.55 * subset["tfidf_similarity"] + 0.45 * subset["svd_similarity"]
+        )
+
+        return subset.sort_values("retrieval_score", ascending=False)
+
+    def _format_sentence_for_display(self, sentence: str) -> str:
+        sentence = self._clean_text(sentence)
+        sentence = re.sub(r"\s+", " ", sentence).strip()
+        if len(sentence) > 320:
+            sentence = sentence[:317].rstrip() + "..."
+        return sentence
+
+    def analyze_ticker(self, ticker: str, top_k: int = 5) -> Dict[str, Any]:
         ticker = str(ticker).upper().strip()
 
         if ticker not in self.alias_map:
@@ -219,11 +452,10 @@ class StockPulseSentiment:
                 "avg_sentiment": None,
                 "posts_used": 0,
                 "top_posts": [],
+                "methodology": self.get_methodology(),
             }
 
-        candidates = self.df[
-            self.df.apply(lambda r: self._matches_ticker(r, ticker), axis=1)
-        ].copy()
+        candidates = self._retrieve_sentences_for_ticker(ticker)
 
         if candidates.empty:
             return {
@@ -233,74 +465,133 @@ class StockPulseSentiment:
                 "avg_sentiment": None,
                 "posts_used": 0,
                 "top_posts": [],
+                "methodology": self.get_methodology(),
             }
 
-        candidates["ticker_relevance"] = candidates.apply(
-            lambda r: self._ticker_relevance(r, ticker), axis=1
+        sentiment_triplets = candidates["sentence"].apply(self._text_sentiment)
+        candidates["sentence_sentiment"] = sentiment_triplets.apply(lambda x: x[0])
+        candidates["sentiment_confidence"] = sentiment_triplets.apply(lambda x: x[1])
+        candidates["lexicon_hits"] = sentiment_triplets.apply(lambda x: x[2])
+
+        candidates["engagement_weight"] = candidates.apply(self._engagement_weight, axis=1)
+        candidates["mention_prominence"] = candidates.apply(
+            lambda r: self._mention_prominence(r, ticker), axis=1
         )
-        candidates["text_sentiment"] = candidates["combined_text"].apply(
-            self._text_sentiment
-        )
-        candidates["engagement_weight"] = candidates.apply(
-            self._engagement_weight, axis=1
+        candidates["recency_weight"] = candidates.apply(self._recency_weight, axis=1)
+
+        candidates["evidence_weight"] = (
+            (0.40 + 0.60 * candidates["retrieval_score"].clip(lower=0.0)) *
+            candidates["engagement_weight"] *
+            candidates["mention_prominence"] *
+            candidates["recency_weight"] *
+            (0.70 + 0.30 * candidates["sentiment_confidence"])
         )
 
-        candidates["final_weight"] = (
-            candidates["ticker_relevance"] * candidates["engagement_weight"]
-        )
-        candidates["contribution"] = (
-            candidates["text_sentiment"] * candidates["final_weight"]
+        candidates["weighted_contribution"] = (
+            candidates["sentence_sentiment"] * candidates["evidence_weight"]
         )
 
-        total_weight = candidates["final_weight"].sum()
+        total_weight = candidates["evidence_weight"].sum()
         avg_sentiment = (
-            candidates["contribution"].sum() / total_weight
-            if total_weight > 0
-            else 0.0
+            candidates["weighted_contribution"].sum() / total_weight if total_weight > 0 else 0.0
         )
 
-        if avg_sentiment > 0.15:
+        sentiment_variance = np.average(
+            (candidates["sentence_sentiment"] - avg_sentiment) ** 2,
+            weights=np.maximum(candidates["evidence_weight"], 1e-8),
+        )
+        disagreement_penalty = min(0.18, 0.35 * math.sqrt(max(sentiment_variance, 0.0)))
+
+        coverage = min(1.0, math.log1p(len(candidates)) / math.log(12))
+        average_retrieval = float(candidates["retrieval_score"].clip(lower=0).mean())
+        average_confidence = float(candidates["sentiment_confidence"].mean())
+
+        raw_stock_score = (
+            0.58 * avg_sentiment +
+            0.14 * (coverage - 0.5) +
+            0.16 * (average_retrieval - 0.35) +
+            0.12 * (average_confidence - 0.5) -
+            disagreement_penalty
+        )
+
+        raw_stock_score = max(-1.0, min(1.0, raw_stock_score))
+        score_0_to_100 = round(50 + 50 * raw_stock_score, 1)
+
+        if raw_stock_score > 0.18:
             label = "Bullish"
-        elif avg_sentiment < -0.15:
+        elif raw_stock_score < -0.18:
             label = "Bearish"
         else:
             label = "Neutral"
 
-        score_0_to_100 = round(50 + 50 * avg_sentiment, 1)
-
         candidates["display_rank"] = (
-            0.55 * candidates["ticker_relevance"]
-            + 0.30 * candidates["engagement_weight"]
-            + 0.15 * candidates["text_sentiment"].abs()
+            0.45 * candidates["retrieval_score"] +
+            0.20 * candidates["engagement_weight"] / candidates["engagement_weight"].max() +
+            0.20 * candidates["mention_prominence"] / candidates["mention_prominence"].max() +
+            0.15 * candidates["sentiment_confidence"]
         )
 
-        top_posts = candidates.sort_values(
-            "display_rank", ascending=False
-        ).head(top_k)
+        display_cols = [
+            "title",
+            "sentence",
+            "score",
+            "comms_num",
+            "url",
+            "sentence_sentiment",
+            "sentiment_confidence",
+            "retrieval_score",
+            "tfidf_similarity",
+            "svd_similarity",
+            "mention_prominence",
+            "engagement_weight",
+            "recency_weight",
+            "source_part",
+        ]
+
+        top_posts_df = candidates.sort_values("display_rank", ascending=False).head(top_k).copy()
+
+        top_posts = []
+        for _, row in top_posts_df[display_cols].iterrows():
+            top_posts.append(
+                {
+                    "title": self._format_sentence_for_display(row["title"]) or "(No title)",
+                    "snippet": self._format_sentence_for_display(row["sentence"]),
+                    "score": int(row["score"]) if not pd.isna(row["score"]) else 0,
+                    "comms_num": int(row["comms_num"]) if not pd.isna(row["comms_num"]) else 0,
+                    "url": row["url"],
+                    "sentence_sentiment": round(float(row["sentence_sentiment"]), 4),
+                    "sentiment_confidence": round(float(row["sentiment_confidence"]), 4),
+                    "retrieval_score": round(float(row["retrieval_score"]), 4),
+                    "tfidf_similarity": round(float(row["tfidf_similarity"]), 4),
+                    "svd_similarity": round(float(row["svd_similarity"]), 4),
+                    "mention_prominence": round(float(row["mention_prominence"]), 4),
+                    "engagement_weight": round(float(row["engagement_weight"]), 4),
+                    "recency_weight": round(float(row["recency_weight"]), 4),
+                    "source_part": row["source_part"],
+                }
+            )
 
         return {
             "ticker": ticker,
             "label": label,
             "score_0_to_100": float(score_0_to_100),
             "avg_sentiment": round(float(avg_sentiment), 4),
+            "raw_stock_score": round(float(raw_stock_score), 4),
             "posts_used": int(len(candidates)),
-            "top_posts": top_posts[
-                [
-                    "title",
-                    "body",
-                    "score",
-                    "comms_num",
-                    "url",
-                    "text_sentiment",
-                    "ticker_relevance",
-                ]
-            ].to_dict(orient="records"),
+            "summary_metrics": {
+                "coverage": round(float(coverage), 4),
+                "average_retrieval": round(float(average_retrieval), 4),
+                "average_confidence": round(float(average_confidence), 4),
+                "disagreement_penalty": round(float(disagreement_penalty), 4),
+            },
+            "top_posts": top_posts,
+            "methodology": self.get_methodology(),
         }
 
-    def rank_all_tickers(self, top_k=25):
+    def rank_all_tickers(self, top_k: int = 25) -> pd.DataFrame:
         rows = []
 
-        for ticker in self.alias_map.keys():
+        for ticker in self.supported_tickers:
             result = self.analyze_ticker(ticker, top_k=3)
             if result["posts_used"] > 0 and result["score_0_to_100"] is not None:
                 rows.append(
@@ -309,7 +600,12 @@ class StockPulseSentiment:
                         "label": result["label"],
                         "score_0_to_100": result["score_0_to_100"],
                         "avg_sentiment": result["avg_sentiment"],
+                        "raw_stock_score": result["raw_stock_score"],
                         "posts_used": result["posts_used"],
+                        "coverage": result["summary_metrics"]["coverage"],
+                        "average_retrieval": result["summary_metrics"]["average_retrieval"],
+                        "average_confidence": result["summary_metrics"]["average_confidence"],
+                        "disagreement_penalty": result["summary_metrics"]["disagreement_penalty"],
                     }
                 )
 
@@ -317,11 +613,60 @@ class StockPulseSentiment:
             return pd.DataFrame()
 
         ranked = pd.DataFrame(rows).sort_values(
-            by=["score_0_to_100", "posts_used"],
-            ascending=[False, False],
+            by=["score_0_to_100", "posts_used", "average_retrieval"],
+            ascending=[False, False, False],
         ).reset_index(drop=True)
 
         return ranked.head(top_k)
+
+    def get_methodology(self) -> Dict[str, Any]:
+        return {
+            "retrieval": {
+                "summary": (
+                    "StockPulse retrieves evidence with a hybrid semantic search system. "
+                    "Each Reddit post is split into sentences, only sentences that actually mention a supported stock "
+                    "ticker or alias are kept, and those sentences are indexed with TF-IDF and Truncated SVD."
+                ),
+                "details": [
+                    "TF-IDF captures exact lexical relevance between the stock query and the sentence.",
+                    "Truncated SVD captures latent semantic similarity beyond exact word overlap.",
+                    "The final retrieval score is 55% TF-IDF similarity and 45% SVD similarity."
+                ],
+            },
+            "sentiment": {
+                "summary": (
+                    "Sentiment is measured on the sentence containing the stock mention, not on the entire Reddit post."
+                ),
+                "details": [
+                    "A finance-oriented lexicon scores bullish and bearish words and phrases.",
+                    "Negation handling reduces errors for phrases such as 'not bullish' or 'not a buy'.",
+                    "A confidence score increases when more finance-relevant sentiment evidence appears."
+                ],
+            },
+            "stock_score": {
+                "summary": (
+                    "The final stock score is a weighted aggregation of sentence-level evidence."
+                ),
+                "details": [
+                    "Evidence weight increases with retrieval relevance, engagement, prominence of the ticker mention, recency if available, and sentiment confidence.",
+                    "Average sentiment is adjusted by coverage, average retrieval strength, average confidence, and a disagreement penalty.",
+                    "The score is mapped to 0-100, where above 50 is net positive, below 50 is net negative."
+                ],
+                "formula": {
+                    "sentence_evidence_weight": (
+                        "(0.40 + 0.60 * retrieval_score) * engagement_weight * mention_prominence "
+                        "* recency_weight * (0.70 + 0.30 * sentiment_confidence)"
+                    ),
+                    "retrieval_score": "0.55 * tfidf_similarity + 0.45 * svd_similarity",
+                    "stock_raw_score": (
+                        "0.58 * avg_sentiment + 0.14 * (coverage - 0.5) + "
+                        "0.16 * (average_retrieval - 0.35) + 0.12 * (average_confidence - 0.5) "
+                        "- disagreement_penalty"
+                    ),
+                    "final_score_0_to_100": "50 + 50 * stock_raw_score",
+                },
+            },
+        }
 
 
 ALIAS_MAP = {
@@ -333,124 +678,28 @@ ALIAS_MAP = {
     "META": ["META", "$META", "Meta", "Facebook"],
     "TSLA": ["TSLA", "$TSLA", "Tesla"],
     "NVDA": ["NVDA", "$NVDA", "Nvidia"],
-    "BRK.B": ["BRK.B", "$BRK.B", "Berkshire Hathaway"],
-    "UNH": ["UNH", "$UNH", "UnitedHealth"],
-    "JNJ": ["JNJ", "$JNJ", "Johnson & Johnson"],
-    "V": ["V", "$V", "Visa"],
-    "PG": ["PG", "$PG", "Procter & Gamble"],
-    "XOM": ["XOM", "$XOM", "Exxon Mobil"],
-    "HD": ["HD", "$HD", "Home Depot"],
-    "MA": ["MA", "$MA", "Mastercard"],
-    "CVX": ["CVX", "$CVX", "Chevron"],
-    "ABBV": ["ABBV", "$ABBV", "AbbVie"],
-    "PFE": ["PFE", "$PFE", "Pfizer"],
-    "KO": ["KO", "$KO", "Coca-Cola"],
-    "PEP": ["PEP", "$PEP", "Pepsi"],
-    "TMO": ["TMO", "$TMO", "Thermo Fisher"],
-    "MRK": ["MRK", "$MRK", "Merck"],
-    "COST": ["COST", "$COST", "Costco"],
-    "DIS": ["DIS", "$DIS", "Disney"],
-    "AVGO": ["AVGO", "$AVGO", "Broadcom"],
-    "ACN": ["ACN", "$ACN", "Accenture"],
-    "ABT": ["ABT", "$ABT", "Abbott"],
-    "DHR": ["DHR", "$DHR", "Danaher"],
-    "ADBE": ["ADBE", "$ADBE", "Adobe"],
-    "CRM": ["CRM", "$CRM", "Salesforce"],
-    "NKE": ["NKE", "$NKE", "Nike"],
-    "LLY": ["LLY", "$LLY", "Eli Lilly"],
-    "TXN": ["TXN", "$TXN", "Texas Instruments"],
-    "WMT": ["WMT", "$WMT", "Walmart"],
-    "MCD": ["MCD", "$MCD", "McDonald's"],
-    "NEE": ["NEE", "$NEE", "NextEra Energy"],
-    "LIN": ["LIN", "$LIN", "Linde"],
-    "ORCL": ["ORCL", "$ORCL", "Oracle"],
-    "INTC": ["INTC", "$INTC", "Intel"],
     "AMD": ["AMD", "$AMD", "Advanced Micro Devices"],
+    "INTC": ["INTC", "$INTC", "Intel"],
+    "ORCL": ["ORCL", "$ORCL", "Oracle"],
+    "CRM": ["CRM", "$CRM", "Salesforce"],
+    "ADBE": ["ADBE", "$ADBE", "Adobe"],
     "QCOM": ["QCOM", "$QCOM", "Qualcomm"],
-    "UPS": ["UPS", "$UPS", "UPS"],
-    "LOW": ["LOW", "$LOW", "Lowe's"],
-    "PM": ["PM", "$PM", "Philip Morris"],
-    "UNP": ["UNP", "$UNP", "Union Pacific"],
-    "RTX": ["RTX", "$RTX", "Raytheon"],
-    "HON": ["HON", "$HON", "Honeywell"],
-    "IBM": ["IBM", "$IBM", "IBM"],
-    "GE": ["GE", "$GE", "General Electric"],
-    "CAT": ["CAT", "$CAT", "Caterpillar"],
-    "BA": ["BA", "$BA", "Boeing"],
-    "GS": ["GS", "$GS", "Goldman Sachs"],
-    "MS": ["MS", "$MS", "Morgan Stanley"],
     "JPM": ["JPM", "$JPM", "JPMorgan"],
     "BAC": ["BAC", "$BAC", "Bank of America"],
     "WFC": ["WFC", "$WFC", "Wells Fargo"],
-    "C": ["C", "$C", "Citigroup"],
-    "BLK": ["BLK", "$BLK", "BlackRock"],
-    "SPGI": ["SPGI", "$SPGI", "S&P Global"],
-    "AXP": ["AXP", "$AXP", "American Express"],
-    "PLD": ["PLD", "$PLD", "Prologis"],
-    "AMT": ["AMT", "$AMT", "American Tower"],
-    "CCI": ["CCI", "$CCI", "Crown Castle"],
-    "EQIX": ["EQIX", "$EQIX", "Equinix"],
-    "NOW": ["NOW", "$NOW", "ServiceNow"],
-    "INTU": ["INTU", "$INTU", "Intuit"],
-    "ISRG": ["ISRG", "$ISRG", "Intuitive Surgical"],
-    "MDT": ["MDT", "$MDT", "Medtronic"],
-    "SYK": ["SYK", "$SYK", "Stryker"],
-    "ZTS": ["ZTS", "$ZTS", "Zoetis"],
-    "BDX": ["BDX", "$BDX", "Becton Dickinson"],
-    "GILD": ["GILD", "$GILD", "Gilead"],
-    "REGN": ["REGN", "$REGN", "Regeneron"],
-    "VRTX": ["VRTX", "$VRTX", "Vertex"],
-    "AMGN": ["AMGN", "$AMGN", "Amgen"],
-    "CVS": ["CVS", "$CVS", "CVS"],
-    "CI": ["CI", "$CI", "Cigna"],
-    "HUM": ["HUM", "$HUM", "Humana"],
-    "ELV": ["ELV", "$ELV", "Elevance"],
-    "ADP": ["ADP", "$ADP", "ADP"],
-    "PAYX": ["PAYX", "$PAYX", "Paychex"],
-    "FIS": ["FIS", "$FIS", "FIS"],
-    "FISV": ["FISV", "$FISV", "Fiserv"],
-    "SQ": ["SQ", "$SQ", "Block"],
+    "GS": ["GS", "$GS", "Goldman Sachs"],
+    "MS": ["MS", "$MS", "Morgan Stanley"],
+    "DIS": ["DIS", "$DIS", "Disney"],
+    "NKE": ["NKE", "$NKE", "Nike"],
+    "WMT": ["WMT", "$WMT", "Walmart"],
+    "TGT": ["TGT", "$TGT", "Target"],
+    "COST": ["COST", "$COST", "Costco"],
+    "SBUX": ["SBUX", "$SBUX", "Starbucks"],
     "PYPL": ["PYPL", "$PYPL", "PayPal"],
+    "SQ": ["SQ", "$SQ", "Block", "Square"],
     "UBER": ["UBER", "$UBER", "Uber"],
     "LYFT": ["LYFT", "$LYFT", "Lyft"],
-    "BKNG": ["BKNG", "$BKNG", "Booking"],
-    "EXPE": ["EXPE", "$EXPE", "Expedia"],
-    "MAR": ["MAR", "$MAR", "Marriott"],
-    "HLT": ["HLT", "$HLT", "Hilton"],
-    "SBUX": ["SBUX", "$SBUX", "Starbucks"],
-    "YUM": ["YUM", "$YUM", "Yum Brands"],
-    "DPZ": ["DPZ", "$DPZ", "Dominos"],
-    "CMG": ["CMG", "$CMG", "Chipotle"],
-    "TGT": ["TGT", "$TGT", "Target"],
-    "DG": ["DG", "$DG", "Dollar General"],
-    "DLTR": ["DLTR", "$DLTR", "Dollar Tree"],
-    "ROST": ["ROST", "$ROST", "Ross"],
-    "BBY": ["BBY", "$BBY", "Best Buy"],
-    "KSS": ["KSS", "$KSS", "Kohl's"],
-    "ETSY": ["ETSY", "$ETSY", "Etsy"],
-    "EBAY": ["EBAY", "$EBAY", "eBay"],
     "SHOP": ["SHOP", "$SHOP", "Shopify"],
-    "AFL": ["AFL", "$AFL", "Aflac"],
-    "AIG": ["AIG", "$AIG", "AIG"],
-    "ALL": ["ALL", "$ALL", "Allstate"],
-    "MET": ["MET", "$MET", "MetLife"],
-    "PRU": ["PRU", "$PRU", "Prudential"],
-    "TRV": ["TRV", "$TRV", "Travelers"],
-    "CB": ["CB", "$CB", "Chubb"],
-    "MMC": ["MMC", "$MMC", "Marsh"],
-    "AON": ["AON", "$AON", "Aon"],
-    "ICE": ["ICE", "$ICE", "Intercontinental Exchange"],
-    "CME": ["CME", "$CME", "CME Group"],
-    "SLB": ["SLB", "$SLB", "Schlumberger"],
-    "EOG": ["EOG", "$EOG", "EOG Resources"],
-    "PSX": ["PSX", "$PSX", "Phillips 66"],
-    "MPC": ["MPC", "$MPC", "Marathon Petroleum"],
-    "OXY": ["OXY", "$OXY", "Occidental"],
-    "DVN": ["DVN", "$DVN", "Devon Energy"],
-    "DUK": ["DUK", "$DUK", "Duke Energy"],
-    "SO": ["SO", "$SO", "Southern Company"],
-    "EXC": ["EXC", "$EXC", "Exelon"],
-    "AEP": ["AEP", "$AEP", "American Electric Power"],
     "SPY": ["SPY", "$SPY", "S&P 500", "sp500"],
 }
 
