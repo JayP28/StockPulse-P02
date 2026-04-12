@@ -437,6 +437,14 @@ class StockPulseRetrieval:
         query_lsi = self.normalizer.transform(query_lsi_raw.copy()).astype(np.float32)
         svd_scores = cosine_similarity(query_lsi, self.doc_lsi).flatten()
 
+        upvote_boost = np.log1p(self.df["score"].clip(lower=0).to_numpy(dtype=np.float32))
+
+        UPVOTE_WEIGHT = 0.03
+
+        baseline_scores = baseline_scores + UPVOTE_WEIGHT * upvote_boost
+        svd_scores = svd_scores + UPVOTE_WEIGHT * upvote_boost
+
+
         important_dimensions = self._build_dimension_explanations(query_lsi_raw[0])
 
         return {
@@ -484,11 +492,11 @@ def get_default_csv_path() -> str:
     current_directory = os.path.dirname(os.path.abspath(__file__))
     repo_root = os.path.dirname(current_directory)
 
-    cleaned_threads_path = os.path.join(repo_root, "cleaned_threads.csv")
+    cleaned_threads_path = os.path.join(repo_root, "cleaned_threads_new.csv")
     if os.path.exists(cleaned_threads_path):
         return cleaned_threads_path
 
-    return os.path.join(current_directory, "prototype_posts.csv")
+   # return os.path.join(current_directory, "prototype_posts.csv")
 
 
 @lru_cache(maxsize=1)
