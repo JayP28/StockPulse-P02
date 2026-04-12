@@ -5,389 +5,653 @@
   <title>StockPulse</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #111827;
+      --panel-soft: #0b1220;
+      --border: #1f2937;
+      --border-strong: #334155;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --blue: #3b82f6;
+      --blue-soft: #93c5fd;
+      --green: #22c55e;
+      --red: #f97316;
+      --amber: #f59e0b;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
     body {
-      font-family: Arial, sans-serif;
-      background: #0f172a;
-      color: #e2e8f0;
       margin: 0;
-      padding: 0;
+      font-family: Arial, sans-serif;
+      background:
+        radial-gradient(circle at top right, rgba(59, 130, 246, 0.18), transparent 28%),
+        linear-gradient(180deg, #08111f 0%, var(--bg) 100%);
+      color: var(--text);
     }
 
     .container {
-      max-width: 1100px;
+      max-width: 1180px;
       margin: 0 auto;
-      padding: 32px 20px 60px;
+      padding: 36px 20px 60px;
     }
 
-    h1, h2, h3 {
+    h1,
+    h2,
+    h3,
+    p {
       margin-top: 0;
     }
 
+    .eyebrow {
+      display: inline-block;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(59, 130, 246, 0.12);
+      color: var(--blue-soft);
+      font-size: 12px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+
     .subtitle {
-      color: #94a3b8;
+      color: var(--muted);
+      max-width: 820px;
+      line-height: 1.6;
       margin-bottom: 28px;
     }
 
     .card {
-      background: #111827;
-      border: 1px solid #1f2937;
-      border-radius: 12px;
-      padding: 20px;
+      background: rgba(17, 24, 39, 0.92);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 22px;
       margin-bottom: 20px;
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.18);
     }
 
-    .row {
+    .controls {
       display: flex;
-      gap: 12px;
       flex-wrap: wrap;
+      gap: 12px;
       align-items: center;
     }
 
-    input, select, button {
-      padding: 10px 12px;
-      border-radius: 8px;
-      border: 1px solid #334155;
-      background: #0b1220;
-      color: #e2e8f0;
+    .controls input,
+    .controls select,
+    .controls button {
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--border-strong);
+      background: var(--panel-soft);
+      color: var(--text);
       font-size: 14px;
     }
 
-    button {
-      cursor: pointer;
-      background: #2563eb;
+    .controls input {
+      flex: 1 1 360px;
+      min-width: 220px;
+    }
+
+    .controls button {
       border: none;
+      background: var(--blue);
+      cursor: pointer;
+      font-weight: bold;
     }
 
-    button:hover {
-      background: #1d4ed8;
+    .controls button:hover {
+      background: #2563eb;
     }
 
-    .metrics {
+    .helper-text,
+    .status,
+    .section-note,
+    .meta-line,
+    .method-list,
+    .dimension-note {
+      color: var(--muted);
+    }
+
+    .helper-text {
+      margin-top: 12px;
+      line-height: 1.5;
+    }
+
+    .status {
+      min-height: 20px;
+      margin-top: 12px;
+    }
+
+    .status.error {
+      color: #fca5a5;
+    }
+
+    .status.loading {
+      color: var(--blue-soft);
+    }
+
+    .comparison-grid,
+    .method-grid,
+    .summary-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-      gap: 12px;
-      margin-top: 16px;
+      gap: 18px;
     }
 
-    .metric {
-      background: #0b1220;
-      border: 1px solid #1f2937;
-      border-radius: 10px;
+    .comparison-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .method-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .summary-grid {
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      margin-top: 14px;
+    }
+
+    .summary-metric {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--panel-soft);
       padding: 14px;
     }
 
     .metric-label {
-      color: #94a3b8;
       font-size: 12px;
-      margin-bottom: 6px;
       text-transform: uppercase;
-      letter-spacing: 0.04em;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin-bottom: 6px;
     }
 
     .metric-value {
-      font-size: 22px;
+      font-size: 20px;
       font-weight: bold;
     }
 
-    .bullish { color: #22c55e; }
-    .bearish { color: #ef4444; }
-    .neutral { color: #f59e0b; }
-
-    .post {
-      padding: 16px;
-      border: 1px solid #1f2937;
-      border-radius: 10px;
+    .results-list {
+      display: grid;
+      gap: 14px;
       margin-top: 14px;
-      background: #0b1220;
     }
 
-    .post-title {
+    .result {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--panel-soft);
+      padding: 16px;
+    }
+
+    .result-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+      margin-bottom: 10px;
+    }
+
+    .result-title {
+      font-size: 18px;
       font-weight: bold;
+      line-height: 1.4;
+    }
+
+    .score-pill {
+      flex-shrink: 0;
+      border-radius: 999px;
+      padding: 6px 10px;
+      background: rgba(59, 130, 246, 0.12);
+      color: var(--blue-soft);
+      font-size: 12px;
+      font-weight: bold;
+    }
+
+    .preview {
+      color: #cbd5e1;
+      line-height: 1.6;
+      margin-bottom: 12px;
+    }
+
+    .meta-line {
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border-strong);
+      background: rgba(148, 163, 184, 0.08);
+      font-size: 12px;
+      color: #dbeafe;
+    }
+
+    .dimension-grid {
+      display: grid;
+      gap: 14px;
+      margin-top: 16px;
+    }
+
+    .dimension-card {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      background: var(--panel-soft);
+    }
+
+    .dimension-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+      margin-bottom: 10px;
+    }
+
+    .dimension-tag {
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: bold;
+      background: rgba(34, 197, 94, 0.12);
+      color: #bbf7d0;
+    }
+
+    .dimension-tag.negative {
+      background: rgba(249, 115, 22, 0.12);
+      color: #fdba74;
+    }
+
+    .terms-columns {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 14px;
+    }
+
+    .terms-box {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      background: rgba(15, 23, 42, 0.6);
+    }
+
+    .terms-label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
       margin-bottom: 8px;
     }
 
-    .post-snippet {
-      color: #cbd5e1;
-      margin-bottom: 10px;
-      line-height: 1.5;
-    }
-
-    .small {
-      font-size: 13px;
-      color: #94a3b8;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 12px;
-    }
-
-    th, td {
-      padding: 10px;
-      border-bottom: 1px solid #1f2937;
-      text-align: left;
-      font-size: 14px;
-    }
-
-    .method-list {
-      margin: 8px 0 0 20px;
-      color: #cbd5e1;
+    .empty {
+      color: var(--muted);
+      border: 1px dashed var(--border-strong);
+      border-radius: 12px;
+      padding: 18px;
+      background: rgba(15, 23, 42, 0.45);
+      margin-top: 14px;
     }
 
     a {
-      color: #60a5fa;
+      color: var(--blue-soft);
     }
 
-    .loading {
-      color: #93c5fd;
-      margin-top: 10px;
+    ul {
+      padding-left: 18px;
     }
 
-    .error {
-      color: #fca5a5;
-      margin-top: 10px;
+    .method-list {
+      line-height: 1.7;
+    }
+
+    @media (max-width: 920px) {
+      .comparison-grid,
+      .method-grid,
+      .terms-columns {
+        grid-template-columns: 1fr;
+      }
+
+      .result-header,
+      .dimension-header {
+        flex-direction: column;
+      }
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>StockPulse</h1>
+    <div class="eyebrow">CS 4300 Milestone</div>
+    <h1>StockPulse Retrieval Comparison</h1>
     <p class="subtitle">
-      Sentence-level information retrieval and sentiment analysis for stock discussion on Reddit.
-      Retrieval uses TF-IDF + SVD, and sentiment is scored on the sentence containing the ticker.
+      Search WallStreetBets and Reddit discussion threads with two retrieval strategies: a baseline
+      TF-IDF cosine ranker and an SVD-based latent semantic ranker. This version focuses on retrieval,
+      not sentiment scoring, so the results and explainability stay centered on IR behavior.
     </p>
 
     <div class="card">
-      <h2>Analyze a Stock</h2>
-      <div class="row">
-        <input id="tickerInput" type="text" placeholder="Enter ticker, e.g. AAPL" />
+      <h2>Search the Corpus</h2>
+      <div class="controls">
+        <input id="queryInput" type="text" placeholder="Enter a ticker or stock query, e.g. NVDA AI chips or bank earnings" />
         <select id="topKSelect">
-          <option value="3">Top 3 snippets</option>
-          <option value="5" selected>Top 5 snippets</option>
-          <option value="10">Top 10 snippets</option>
+          <option value="3">Top 3 posts</option>
+          <option value="5" selected>Top 5 posts</option>
+          <option value="8">Top 8 posts</option>
         </select>
-        <button id="analyzeBtn">Analyze</button>
-        <button id="loadRankingsBtn">Load Rankings</button>
+        <button id="searchBtn">Run Search</button>
       </div>
-      <div id="status"></div>
+      <p class="helper-text">
+        Example queries: <strong>NVDA AI chips</strong>, <strong>TSLA deliveries</strong>,
+        <strong>bank earnings</strong>, <strong>merger arbitrage</strong>.
+      </p>
+      <div id="status" class="status"></div>
     </div>
 
-    <div id="analysisCard" class="card" style="display:none;">
-      <h2 id="analysisHeader">Analysis</h2>
-      <div id="metrics" class="metrics"></div>
-      <div id="topPosts"></div>
+    <div id="comparisonSection" class="comparison-grid" style="display:none;">
+      <div class="card">
+        <h2>Baseline TF-IDF</h2>
+        <p class="section-note">
+          Exact-term retrieval using TF-IDF vectors and cosine similarity in the original term space.
+        </p>
+        <div id="baselineResults"></div>
+      </div>
+
+      <div class="card">
+        <h2>SVD Retrieval</h2>
+        <p class="section-note">
+          Latent semantic retrieval using TruncatedSVD projections and cosine similarity in latent space.
+        </p>
+        <div id="svdResults"></div>
+      </div>
     </div>
 
-    <div id="rankingsCard" class="card" style="display:none;">
-      <h2>Top Ranked Stocks</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Ticker</th>
-            <th>Label</th>
-            <th>Score</th>
-            <th>Avg Sentiment</th>
-            <th>Posts Used</th>
-          </tr>
-        </thead>
-        <tbody id="rankingsTableBody"></tbody>
-      </table>
+    <div id="explainCard" class="card" style="display:none;">
+      <h2>SVD Explainability</h2>
+      <p id="explainSummary" class="section-note"></p>
+      <div id="statsGrid" class="summary-grid"></div>
+      <div id="dimensionGrid" class="dimension-grid"></div>
     </div>
 
     <div id="methodologyCard" class="card">
-      <h2>How the Score Is Determined</h2>
+      <h2>How the Retrieval Methods Work</h2>
       <div id="methodologyContent">Loading methodology...</div>
     </div>
   </div>
 
   <script>
-    const tickerInput = document.getElementById("tickerInput");
+    const queryInput = document.getElementById("queryInput");
     const topKSelect = document.getElementById("topKSelect");
-    const analyzeBtn = document.getElementById("analyzeBtn");
-    const loadRankingsBtn = document.getElementById("loadRankingsBtn");
+    const searchBtn = document.getElementById("searchBtn");
     const statusDiv = document.getElementById("status");
 
-    const analysisCard = document.getElementById("analysisCard");
-    const analysisHeader = document.getElementById("analysisHeader");
-    const metricsDiv = document.getElementById("metrics");
-    const topPostsDiv = document.getElementById("topPosts");
+    const comparisonSection = document.getElementById("comparisonSection");
+    const baselineResults = document.getElementById("baselineResults");
+    const svdResults = document.getElementById("svdResults");
 
-    const rankingsCard = document.getElementById("rankingsCard");
-    const rankingsTableBody = document.getElementById("rankingsTableBody");
-
+    const explainCard = document.getElementById("explainCard");
+    const explainSummary = document.getElementById("explainSummary");
+    const statsGrid = document.getElementById("statsGrid");
+    const dimensionGrid = document.getElementById("dimensionGrid");
     const methodologyContent = document.getElementById("methodologyContent");
 
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function formatNumber(value) {
+      const number = Number(value);
+      if (Number.isNaN(number)) {
+        return "N/A";
+      }
+      return number.toFixed(4);
+    }
+
     function setStatus(message, type = "loading") {
-      statusDiv.className = type;
+      statusDiv.className = `status ${type}`;
       statusDiv.textContent = message;
     }
 
-    function labelClass(label) {
-      const value = (label || "").toLowerCase();
-      if (value.includes("bull")) return "bullish";
-      if (value.includes("bear")) return "bearish";
-      return "neutral";
+    function emptyState(message) {
+      return `<div class="empty">${escapeHtml(message)}</div>`;
     }
 
-    function metricCard(label, value, className = "") {
+    function metadataLine(result) {
+      const bits = [
+        `Similarity: ${formatNumber(result.similarity)}`,
+        result.score !== undefined ? `Reddit score: ${escapeHtml(result.score)}` : "",
+        result.comms_num !== undefined ? `Comments: ${escapeHtml(result.comms_num)}` : "",
+        result.tag ? `Tag: ${escapeHtml(result.tag)}` : "",
+        result.datetime ? `Date: ${escapeHtml(result.datetime)}` : "",
+      ].filter(Boolean);
+
+      return bits.join(" | ");
+    }
+
+    function alignmentChips(result) {
+      const dimensions = result.aligned_dimensions || [];
+      if (!dimensions.length) {
+        return "";
+      }
+
       return `
-        <div class="metric">
-          <div class="metric-label">${label}</div>
-          <div class="metric-value ${className}">${value}</div>
+        <div class="chip-row">
+          ${dimensions.map((dimension) => `
+            <span class="chip">
+              D${escapeHtml(dimension.dimension)} | ${escapeHtml(dimension.short_label)} | ${formatNumber(dimension.alignment)}
+            </span>
+          `).join("")}
         </div>
       `;
     }
 
-    function renderAnalysis(data) {
-      analysisCard.style.display = "block";
-      analysisHeader.textContent = `${data.ticker} Analysis`;
+    function resultCard(result) {
+      const title = escapeHtml(result.title || "(No title)");
+      const preview = escapeHtml(result.preview || "");
+      const url = result.url
+        ? `<a href="${escapeHtml(result.url)}" target="_blank" rel="noopener noreferrer">Open source post</a>`
+        : "";
 
-      const labelCls = labelClass(data.label);
-
-      metricsDiv.innerHTML = `
-        ${metricCard("Label", data.label, labelCls)}
-        ${metricCard("Score (0-100)", data.score_0_to_100 ?? "N/A")}
-        ${metricCard("Average Sentiment", data.avg_sentiment ?? "N/A")}
-        ${metricCard("Posts Used", data.posts_used ?? 0)}
-        ${metricCard("Coverage", data.summary_metrics?.coverage ?? "N/A")}
-        ${metricCard("Avg Retrieval", data.summary_metrics?.average_retrieval ?? "N/A")}
-        ${metricCard("Avg Confidence", data.summary_metrics?.average_confidence ?? "N/A")}
-        ${metricCard("Disagreement Penalty", data.summary_metrics?.disagreement_penalty ?? "N/A")}
+      return `
+        <div class="result">
+          <div class="result-header">
+            <div class="result-title">${title}</div>
+            <div class="score-pill">#${escapeHtml(result.rank)} · ${formatNumber(result.similarity)}</div>
+          </div>
+          <div class="preview">${preview}</div>
+          <div class="meta-line">${escapeHtml(metadataLine(result))}</div>
+          ${alignmentChips(result)}
+          ${url ? `<div class="meta-line" style="margin-top:10px;">${url}</div>` : ""}
+        </div>
       `;
+    }
 
-      const posts = data.top_posts || [];
-      if (!posts.length) {
-        topPostsDiv.innerHTML = "<h3>Top Retrieved Evidence</h3><p>No snippets found.</p>";
+    function renderResults(container, results, emptyMessage) {
+      if (!results || !results.length) {
+        container.innerHTML = emptyState(emptyMessage);
         return;
       }
 
-      topPostsDiv.innerHTML = `
-        <h3>Top Retrieved Evidence</h3>
-        ${posts.map(post => `
-          <div class="post">
-            <div class="post-title">${post.title}</div>
-            <div class="post-snippet">${post.snippet}</div>
-            <div class="small">
-              Sentiment: ${post.sentence_sentiment} |
-              Confidence: ${post.sentiment_confidence} |
-              Retrieval: ${post.retrieval_score} |
-              Upvotes: ${post.score} |
-              Comments: ${post.comms_num} |
-              Source: ${post.source_part}
-            </div>
-            ${post.url ? `<div class="small" style="margin-top:8px;"><a href="${post.url}" target="_blank">Open source post</a></div>` : ""}
-          </div>
-        `).join("")}
+      container.innerHTML = `<div class="results-list">${results.map(resultCard).join("")}</div>`;
+    }
+
+    function metricCard(label, value) {
+      return `
+        <div class="summary-metric">
+          <div class="metric-label">${escapeHtml(label)}</div>
+          <div class="metric-value">${escapeHtml(value)}</div>
+        </div>
       `;
     }
 
-    function renderRankings(rows) {
-      rankingsCard.style.display = "block";
-      rankingsTableBody.innerHTML = rows.map(row => `
-        <tr>
-          <td>${row.ticker}</td>
-          <td class="${labelClass(row.label)}">${row.label}</td>
-          <td>${row.score_0_to_100}</td>
-          <td>${row.avg_sentiment}</td>
-          <td>${row.posts_used}</td>
-        </tr>
-      `).join("");
+    function termChips(terms) {
+      return `
+        <div class="chip-row">
+          ${(terms || []).map((term) => `<span class="chip">${escapeHtml(term)}</span>`).join("")}
+        </div>
+      `;
+    }
+
+    function dimensionCard(dimension) {
+      const tagClass = dimension.query_pole === "negative" ? "dimension-tag negative" : "dimension-tag";
+
+      return `
+        <div class="dimension-card">
+          <div class="dimension-header">
+            <div>
+              <h3>D${escapeHtml(dimension.dimension)}: ${escapeHtml(dimension.short_label)}</h3>
+              <p class="dimension-note">${escapeHtml(dimension.interpretation)}</p>
+            </div>
+            <div class="${tagClass}">
+              ${escapeHtml(dimension.query_pole)} ${formatNumber(dimension.query_strength)}
+            </div>
+          </div>
+          <div class="terms-columns">
+            <div class="terms-box">
+              <div class="terms-label">Active Side</div>
+              ${termChips(dimension.active_terms)}
+            </div>
+            <div class="terms-box">
+              <div class="terms-label">Opposite Side</div>
+              ${termChips(dimension.opposing_terms)}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderExplainability(payload) {
+      const explainability = payload.svd_explainability || {};
+      const stats = payload.stats || {};
+
+      explainCard.style.display = "block";
+      explainSummary.textContent = explainability.summary || "";
+
+      statsGrid.innerHTML = [
+        metricCard("Documents", stats.document_count ?? "N/A"),
+        metricCard("Vocabulary", stats.vocabulary_size ?? "N/A"),
+        metricCard("SVD Components", stats.svd_components ?? "N/A"),
+        metricCard("Search Field", stats.search_field ?? "N/A"),
+      ].join("");
+
+      const dimensions = explainability.important_dimensions || [];
+      if (!dimensions.length) {
+        dimensionGrid.innerHTML = emptyState("No SVD dimensions were available for this query.");
+        return;
+      }
+
+      dimensionGrid.innerHTML = dimensions.map(dimensionCard).join("");
     }
 
     function renderMethodology(methodology) {
+      const sections = ["baseline", "svd", "explainability"];
+
       methodologyContent.innerHTML = `
-        <h3>Retrieval</h3>
-        <p>${methodology.retrieval.summary}</p>
-        <ul class="method-list">
-          ${methodology.retrieval.details.map(item => `<li>${item}</li>`).join("")}
-        </ul>
-
-        <h3>Sentiment</h3>
-        <p>${methodology.sentiment.summary}</p>
-        <ul class="method-list">
-          ${methodology.sentiment.details.map(item => `<li>${item}</li>`).join("")}
-        </ul>
-
-        <h3>Stock Score</h3>
-        <p>${methodology.stock_score.summary}</p>
-        <ul class="method-list">
-          ${methodology.stock_score.details.map(item => `<li>${item}</li>`).join("")}
-        </ul>
-
-        <h3>Formula Summary</h3>
-        <ul class="method-list">
-          <li><strong>Sentence Evidence Weight:</strong> ${methodology.stock_score.formula.sentence_evidence_weight}</li>
-          <li><strong>Retrieval Score:</strong> ${methodology.stock_score.formula.retrieval_score}</li>
-          <li><strong>Raw Stock Score:</strong> ${methodology.stock_score.formula.stock_raw_score}</li>
-          <li><strong>Final 0-100 Score:</strong> ${methodology.stock_score.formula.final_score_0_to_100}</li>
-        </ul>
+        <div class="method-grid">
+          ${sections.map((section) => `
+            <div class="summary-metric">
+              <h3>${escapeHtml(section.toUpperCase())}</h3>
+              <p class="section-note">${escapeHtml(methodology[section].summary)}</p>
+              <ul class="method-list">
+                ${(methodology[section].details || []).map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
+              </ul>
+            </div>
+          `).join("")}
+        </div>
       `;
     }
 
     async function loadMethodology() {
       try {
-        const res = await fetch("/api/stock/methodology");
-        const data = await res.json();
+        const response = await fetch("/api/stock/methodology");
+        const data = await response.json();
+
+        if (!response.ok) {
+          methodologyContent.innerHTML = emptyState(data.error || "Failed to load methodology.");
+          return;
+        }
+
         renderMethodology(data);
-      } catch (err) {
-        methodologyContent.innerHTML = "<p>Failed to load methodology.</p>";
+      } catch (error) {
+        methodologyContent.innerHTML = emptyState("Failed to load methodology.");
       }
     }
 
-    async function analyzeTicker() {
-      const ticker = tickerInput.value.trim().toUpperCase();
-      const topK = parseInt(topKSelect.value, 10);
+    async function runSearch() {
+      const query = queryInput.value.trim();
+      const topK = Number.parseInt(topKSelect.value, 10);
 
-      if (!ticker) {
-        setStatus("Please enter a ticker.", "error");
+      if (!query) {
+        setStatus("Please enter a ticker or stock query.", "error");
         return;
       }
 
-      setStatus("Analyzing ticker...");
-      analysisCard.style.display = "none";
+      setStatus(`Searching for "${query}"...`, "loading");
+      comparisonSection.style.display = "none";
+      explainCard.style.display = "none";
 
       try {
-        const res = await fetch("/api/stock/analyze", {
+        const response = await fetch("/api/stock/search", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ticker, top_k: topK }),
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            query,
+            top_k: topK,
+          }),
         });
 
-        const data = await res.json();
+        const data = await response.json();
 
-        if (!res.ok) {
-          setStatus(data.error || "Request failed.", "error");
+        if (!response.ok) {
+          setStatus(data.error || "Search failed.", "error");
           return;
         }
 
-        renderAnalysis(data);
-        setStatus(`Loaded analysis for ${ticker}.`, "loading");
-      } catch (err) {
-        setStatus("Failed to analyze ticker.", "error");
+        comparisonSection.style.display = "grid";
+        renderResults(
+          baselineResults,
+          data.baseline_results,
+          "No baseline matches were returned for this query."
+        );
+        renderResults(
+          svdResults,
+          data.svd_results,
+          "No SVD matches were returned for this query."
+        );
+        renderExplainability(data);
+        setStatus(`Loaded retrieval comparison for "${query}".`, "loading");
+      } catch (error) {
+        setStatus("Failed to run the search request.", "error");
       }
     }
 
-    async function loadRankings() {
-      setStatus("Loading rankings...");
-      try {
-        const res = await fetch("/api/stock/rankings?top_k=25");
-        const data = await res.json();
-
-        if (!res.ok) {
-          setStatus(data.error || "Failed to load rankings.", "error");
-          return;
-        }
-
-        renderRankings(data);
-        setStatus("Loaded top rankings.", "loading");
-      } catch (err) {
-        setStatus("Failed to load rankings.", "error");
+    searchBtn.addEventListener("click", runSearch);
+    queryInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        runSearch();
       }
-    }
-
-    analyzeBtn.addEventListener("click", analyzeTicker);
-    loadRankingsBtn.addEventListener("click", loadRankings);
+    });
 
     loadMethodology();
   </script>
