@@ -1,11 +1,13 @@
 import json
+import sys
 
-from final_rank import get_default_model
+from retrieval import get_default_retriever
 
 
 def main():
-    model = get_default_model()
-    result = model.analyze_ticker("AAPL", top_k=5)
+    query = " ".join(sys.argv[1:]).strip() or "NVDA AI chips"
+    retriever = get_default_retriever()
+    result = retriever.search(query, top_k=3)
     print(json.dumps(result, indent=2))
 
 

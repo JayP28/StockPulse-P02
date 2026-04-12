@@ -1,18 +1,34 @@
 import os
 
-from dotenv import load_dotenv
 from flask import Flask, jsonify, request
-from flask_cors import CORS
+
+from retrieval import get_default_retriever, get_methodology_overview
+from routes import register_routes
+
+try:
+    from dotenv import load_dotenv
+except ImportError:
+    def load_dotenv():
+        return False
+
+try:
+    from flask_cors import CORS
+except ImportError:
+    def CORS(_app):
+        return _app
 
 load_dotenv()
-
-from final_rank import ALIAS_MAP, get_default_model
-from routes import register_routes
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
 CORS(app)
 
 register_routes(app)
+
+
+def _read_request_data():
+    if request.method == "GET":
+        return request.args
+    return request.get_json(silent=True) or {}
 
 
 @app.route("/api/health", methods=["GET"])
@@ -23,25 +39,18 @@ def health():
             "available_routes": [
                 "/",
                 "/api/health",
-                "/api/stock/tickers",
-                "/api/stock/analyze",
-                "/api/stock/rankings",
+                "/api/stock/search",
                 "/api/stock/methodology",
             ],
         }
     )
 
 
-@app.route("/api/stock/tickers", methods=["GET"])
-def get_tickers():
-    return jsonify({"tickers": sorted(ALIAS_MAP.keys())})
+@app.route("/api/stock/search", methods=["GET", "POST"])
+def search_stock_posts():
+    data = _read_request_data()
 
-
-@app.route("/api/stock/analyze", methods=["POST"])
-def analyze_stock():
-    data = request.get_json(silent=True) or {}
-
-    ticker = str(data.get("ticker", "")).strip().upper()
+    query = str(data.get("query", "")).strip()
     top_k = data.get("top_k", 5)
 
     try:
@@ -52,33 +61,14 @@ def analyze_stock():
     if top_k <= 0:
         return jsonify({"error": "top_k must be greater than 0"}), 400
 
-    if not ticker:
-        return jsonify({"error": "ticker is required"}), 400
+    if not query:
+        return jsonify({"error": "query is required"}), 400
 
     try:
-        model = get_default_model()
-        result = model.analyze_ticker(ticker, top_k=top_k)
-        return jsonify(result)
-    except Exception as exc:
-        return jsonify({"error": str(exc)}), 500
-
-
-@app.route("/api/stock/rankings", methods=["GET"])
-def get_rankings():
-    top_k = request.args.get("top_k", 25)
-
-    try:
-        top_k = int(top_k)
-    except (TypeError, ValueError):
-        return jsonify({"error": "top_k must be an integer"}), 400
-
-    if top_k <= 0:
-        return jsonify({"error": "top_k must be greater than 0"}), 400
-
-    try:
-        model = get_default_model()
-        ranked_df = model.rank_all_tickers(top_k=top_k)
-        return jsonify(ranked_df.to_dict(orient="records"))
+        retriever = get_default_retriever()
+        return jsonify(retriever.search(query, top_k=top_k))
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
 
@@ -86,8 +76,7 @@ def get_rankings():
 @app.route("/api/stock/methodology", methods=["GET"])
 def get_methodology():
     try:
-        model = get_default_model()
-        return jsonify(model.get_methodology())
+        return jsonify(get_methodology_overview())
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
 

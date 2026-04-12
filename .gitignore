@@ -20,4 +20,4 @@ build/
 helpers/*
 json_template/
 
-.env
+.envdata.csv
