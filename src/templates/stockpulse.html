@@ -338,15 +338,14 @@
     <div class="eyebrow">CS 4300 Milestone</div>
     <h1>StockPulse Retrieval Comparison</h1>
     <p class="subtitle">
-      Search WallStreetBets and Reddit discussion threads with two retrieval strategies: a baseline
-      TF-IDF cosine ranker and an SVD-based latent semantic ranker. This version focuses on retrieval,
-      not sentiment scoring, so the results and explainability stay centered on IR behavior.
+      Search Reddit discussion threads using two retrieval strategies: a baseline
+      TF-IDF cosine ranker and an SVD-based latent semantic ranker. 
     </p>
 
     <div class="card">
       <h2>Search the Corpus</h2>
       <div class="controls">
-        <input id="queryInput" type="text" placeholder="Enter a ticker or stock query, e.g. NVDA AI chips or bank earnings" />
+        <input id="queryInput" type="text" placeholder="Enter  stock ticker, e.g. NVDA, AAPL, etc..." />
         <select id="topKSelect">
           <option value="3">Top 3 posts</option>
           <option value="5" selected>Top 5 posts</option>
