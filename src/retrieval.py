@@ -501,10 +501,7 @@ class StockPulseRetrieval:
 def get_default_csv_path() -> str:
     if os.path.exists("cleaned_threads_cut.csv"):
         return "cleaned_threads_cut.csv"
-
-    if os.path.exists("prototype_posts.csv"):
-        return "prototype_posts.csv"
-
+        
     raise FileNotFoundError(
         f"No dataset found. Files: {os.listdir(os.getcwd())}"
     )
