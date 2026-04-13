@@ -492,7 +492,7 @@ def get_default_csv_path() -> str:
     current_directory = os.path.dirname(os.path.abspath(__file__))
     repo_root = os.path.dirname(current_directory)
 
-    cleaned_threads_path = os.path.join(repo_root, "cleaned_threads_new.csv")
+    cleaned_threads_path = os.path.join(repo_root, "cleaned_threads_cut.csv")
     if os.path.exists(cleaned_threads_path):
         return cleaned_threads_path
 
