@@ -484,19 +484,30 @@ class StockPulseRetrieval:
         }
 
 
-def get_default_csv_path() -> str:
-    env_path = os.getenv("STOCKPULSE_DATA_PATH")
-    if env_path:
-        return env_path
+#def get_default_csv_path() -> str:
+#    env_path = os.getenv("STOCKPULSE_DATA_PATH")
+#    if env_path:
+#        return env_path
 
-    current_directory = os.path.dirname(os.path.abspath(__file__))
-    repo_root = os.path.dirname(current_directory)
+#    current_directory = os.path.dirname(os.path.abspath(__file__))
+#    repo_root = os.path.dirname(current_directory)
 
-    cleaned_threads_path = os.path.join(repo_root, "cleaned_threads_cut.csv")
-    if os.path.exists(cleaned_threads_path):
-        return cleaned_threads_path
+#    cleaned_threads_path = os.path.join(repo_root, "cleaned_threads_cut.csv")
+#    if os.path.exists(cleaned_threads_path):
+#        return cleaned_threads_path
 
    # return os.path.join(current_directory, "prototype_posts.csv")
+
+def get_default_csv_path() -> str:
+    if os.path.exists("cleaned_threads_cut.csv"):
+        return "cleaned_threads_cut.csv"
+
+    if os.path.exists("prototype_posts.csv"):
+        return "prototype_posts.csv"
+
+    raise FileNotFoundError(
+        f"No dataset found. Files: {os.listdir(os.getcwd())}"
+    )
 
 
 @lru_cache(maxsize=1)
