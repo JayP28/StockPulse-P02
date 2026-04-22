@@ -9,4 +9,5 @@ pandas
 numpy
 scikit-learn
 openpyxl
+yfinance
 git+https://github.com/MrPeterss/infosci-spark-client.git

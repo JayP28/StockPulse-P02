@@ -4,6 +4,9 @@
   <meta charset="UTF-8" />
   <title>StockPulse</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
   <style>
     :root {
       --bg: #0f172a;
@@ -16,178 +19,169 @@
       --blue: #3b82f6;
       --blue-soft: #93c5fd;
       --green: #22c55e;
+      --green-soft: #86efac;
       --red: #f97316;
+      --red-soft: #fdba74;
       --amber: #f59e0b;
+      --amber-soft: #fde68a;
+      --purple: #a78bfa;
+      --teal: #2dd4bf;
+      --font-mono: 'Space Mono', monospace;
+      --font-body: 'DM Sans', sans-serif;
     }
 
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
       margin: 0;
-      font-family: Arial, sans-serif;
+      font-family: var(--font-body);
       background:
-        radial-gradient(circle at top right, rgba(59, 130, 246, 0.18), transparent 28%),
+        radial-gradient(ellipse at 80% 0%, rgba(59,130,246,0.13) 0%, transparent 55%),
+        radial-gradient(ellipse at 10% 90%, rgba(167,139,250,0.08) 0%, transparent 50%),
         linear-gradient(180deg, #08111f 0%, var(--bg) 100%);
       color: var(--text);
+      min-height: 100vh;
     }
 
     .container {
-      max-width: 1180px;
+      max-width: 1200px;
       margin: 0 auto;
-      padding: 36px 20px 60px;
+      padding: 36px 20px 80px;
     }
 
-    h1,
-    h2,
-    h3,
-    p {
-      margin-top: 0;
-    }
+    h1, h2, h3, p { margin-top: 0; }
 
+    /* ── Header ── */
+    .page-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 20px;
+      margin-bottom: 36px;
+    }
+    .header-logo {
+      font-family: var(--font-mono);
+      font-size: 36px;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--blue-soft), var(--teal));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1;
+      letter-spacing: -1px;
+    }
+    .header-meta { flex: 1; }
     .eyebrow {
       display: inline-block;
-      padding: 6px 10px;
+      padding: 4px 10px;
       border-radius: 999px;
-      background: rgba(59, 130, 246, 0.12);
+      background: rgba(59,130,246,0.12);
       color: var(--blue-soft);
-      font-size: 12px;
-      letter-spacing: 0.06em;
+      font-size: 11px;
+      letter-spacing: 0.1em;
       text-transform: uppercase;
-      margin-bottom: 14px;
+      margin-bottom: 10px;
+      font-family: var(--font-mono);
     }
-
+    .page-header h1 {
+      font-size: 28px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      letter-spacing: -0.5px;
+    }
     .subtitle {
       color: var(--muted);
-      max-width: 820px;
       line-height: 1.6;
-      margin-bottom: 28px;
+      font-size: 14px;
+      max-width: 700px;
+      margin-bottom: 0;
     }
 
+    /* ── Cards ── */
     .card {
-      background: rgba(17, 24, 39, 0.92);
+      background: rgba(17,24,39,0.92);
       border: 1px solid var(--border);
       border-radius: 16px;
-      padding: 22px;
-      margin-bottom: 20px;
-      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.18);
+      padding: 24px;
+      margin-bottom: 22px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.2);
     }
+    .card-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .card-title .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--blue);
+      flex-shrink: 0;
+    }
+    .card-title .dot.green { background: var(--green); }
+    .card-title .dot.purple { background: var(--purple); }
+    .card-title .dot.amber { background: var(--amber); }
+    .card-title .dot.teal { background: var(--teal); }
 
+    /* ── Search Controls ── */
     .controls {
       display: flex;
       flex-wrap: wrap;
-      gap: 12px;
+      gap: 10px;
       align-items: center;
+      margin-top: 14px;
     }
-
     .controls input,
-    .controls select,
-    .controls button {
-      padding: 12px 14px;
+    .controls select {
+      padding: 11px 14px;
       border-radius: 10px;
       border: 1px solid var(--border-strong);
       background: var(--panel-soft);
       color: var(--text);
       font-size: 14px;
+      font-family: var(--font-body);
     }
+    .controls input { flex: 1 1 300px; min-width: 180px; }
+    .controls input:focus,
+    .controls select:focus { outline: 2px solid var(--blue); border-color: transparent; }
 
-    .controls input {
-      flex: 1 1 360px;
-      min-width: 220px;
-    }
-
-    .controls button {
+    .btn {
+      padding: 11px 22px;
+      border-radius: 10px;
       border: none;
-      background: var(--blue);
+      font-size: 14px;
+      font-weight: 600;
       cursor: pointer;
-      font-weight: bold;
+      font-family: var(--font-body);
+      transition: opacity 0.15s, transform 0.1s;
     }
+    .btn:hover:not(:disabled) { opacity: 0.88; transform: translateY(-1px); }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn-primary { background: var(--blue); color: #fff; }
+    .btn-rag { background: #e03131; color: #fff; }
 
-    .controls button:hover {
-      background: #2563eb;
-    }
+    .helper-text { color: var(--muted); font-size: 13px; margin-top: 10px; line-height: 1.5; }
 
-    .helper-text,
-    .status,
-    .section-note,
-    .meta-line,
-    .method-list,
-    .dimension-note {
-      color: var(--muted);
-    }
+    .status { min-height: 20px; margin-top: 12px; font-size: 13px; color: var(--muted); }
+    .status.error { color: #fca5a5; }
+    .status.loading { color: var(--blue-soft); }
+    .status.success { color: var(--green-soft); }
 
-    .helper-text {
-      margin-top: 12px;
-      line-height: 1.5;
-    }
+    /* ── Section Note ── */
+    .section-note { color: var(--muted); font-size: 13px; margin-bottom: 14px; line-height: 1.6; }
 
-    .status {
-      min-height: 20px;
-      margin-top: 12px;
-    }
+    /* ── Comparison Grid (existing IR results) ── */
+    .comparison-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 18px; }
 
-    .status.error {
-      color: #fca5a5;
-    }
-
-    .status.loading {
-      color: var(--blue-soft);
-    }
-
-    .comparison-grid,
-    .method-grid,
-    .summary-grid {
-      display: grid;
-      gap: 18px;
-    }
-
-    .comparison-grid {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .method-grid {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-
-    .summary-grid {
-      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-      margin-top: 14px;
-    }
-
-    .summary-metric {
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      background: var(--panel-soft);
-      padding: 14px;
-    }
-
-    .metric-label {
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: var(--muted);
-      margin-bottom: 6px;
-    }
-
-    .metric-value {
-      font-size: 20px;
-      font-weight: bold;
-    }
-
-    .results-list {
-      display: grid;
-      gap: 14px;
-      margin-top: 14px;
-    }
-
+    /* ── Results list ── */
+    .results-list { display: grid; gap: 12px; margin-top: 12px; }
     .result {
       border: 1px solid var(--border);
       border-radius: 12px;
       background: var(--panel-soft);
       padding: 16px;
     }
-
     .result-header {
       display: flex;
       justify-content: space-between;
@@ -195,65 +189,70 @@
       align-items: flex-start;
       margin-bottom: 10px;
     }
-
-    .result-title {
-      font-size: 18px;
-      font-weight: bold;
-      line-height: 1.4;
-    }
-
+    .result-title { font-size: 15px; font-weight: 600; line-height: 1.4; }
     .score-pill {
       flex-shrink: 0;
       border-radius: 999px;
-      padding: 6px 10px;
-      background: rgba(59, 130, 246, 0.12);
+      padding: 5px 10px;
+      background: rgba(59,130,246,0.12);
       color: var(--blue-soft);
-      font-size: 12px;
-      font-weight: bold;
+      font-size: 11px;
+      font-weight: 700;
+      font-family: var(--font-mono);
     }
-
-    .preview {
-      color: #cbd5e1;
-      line-height: 1.6;
-      margin-bottom: 12px;
-    }
-
-    .meta-line {
-      font-size: 13px;
-      line-height: 1.6;
-    }
-
-    .chip-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 10px;
-    }
-
+    .preview { color: #cbd5e1; line-height: 1.6; margin-bottom: 10px; font-size: 13px; }
+    .meta-line { font-size: 12px; color: var(--muted); line-height: 1.6; }
+    .chip-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
     .chip {
       display: inline-flex;
       align-items: center;
-      padding: 6px 10px;
+      padding: 4px 9px;
       border-radius: 999px;
       border: 1px solid var(--border-strong);
-      background: rgba(148, 163, 184, 0.08);
-      font-size: 12px;
+      background: rgba(148,163,184,0.07);
+      font-size: 11px;
       color: #dbeafe;
+      font-family: var(--font-mono);
     }
 
-    .dimension-grid {
+    /* ── Summary Metrics ── */
+    .summary-grid {
       display: grid;
-      gap: 14px;
-      margin-top: 16px;
+      grid-template-columns: repeat(auto-fit, minmax(160px,1fr));
+      gap: 12px;
+      margin-top: 14px;
     }
+    .summary-metric {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--panel-soft);
+      padding: 14px;
+    }
+    .metric-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      margin-bottom: 6px;
+      font-family: var(--font-mono);
+    }
+    .metric-value { font-size: 20px; font-weight: 700; font-family: var(--font-mono); }
+    .metric-value.green { color: var(--green-soft); }
+    .metric-value.red { color: var(--red-soft); }
+    .metric-value.muted { color: var(--muted); }
 
+    /* ── Methodology Grid ── */
+    .method-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 18px; }
+    .method-list { color: var(--muted); line-height: 1.7; font-size: 13px; }
+
+    /* ── SVD Dimension Cards ── */
+    .dimension-grid { display: grid; gap: 14px; margin-top: 16px; }
     .dimension-card {
       border: 1px solid var(--border);
       border-radius: 14px;
       padding: 16px;
       background: var(--panel-soft);
     }
-
     .dimension-header {
       display: flex;
       justify-content: space-between;
@@ -261,398 +260,781 @@
       align-items: flex-start;
       margin-bottom: 10px;
     }
-
     .dimension-tag {
       border-radius: 999px;
-      padding: 6px 10px;
-      font-size: 12px;
-      font-weight: bold;
-      background: rgba(34, 197, 94, 0.12);
-      color: #bbf7d0;
+      padding: 5px 10px;
+      font-size: 11px;
+      font-weight: 700;
+      background: rgba(34,197,94,0.12);
+      color: var(--green-soft);
+      font-family: var(--font-mono);
+      flex-shrink: 0;
     }
-
-    .dimension-tag.negative {
-      background: rgba(249, 115, 22, 0.12);
-      color: #fdba74;
-    }
-
-    .terms-columns {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 14px;
-      margin-top: 14px;
-    }
-
-    .terms-box {
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 12px;
-      background: rgba(15, 23, 42, 0.6);
-    }
-
-    .terms-label {
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: var(--muted);
-      margin-bottom: 8px;
-    }
+    .dimension-tag.negative { background: rgba(249,115,22,0.12); color: var(--red-soft); }
+    .dimension-note { color: var(--muted); font-size: 13px; }
+    .terms-columns { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px; margin-top: 14px; }
+    .terms-box { border: 1px solid var(--border); border-radius: 10px; padding: 12px; background: rgba(15,23,42,0.6); }
+    .terms-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 8px; font-family: var(--font-mono); }
 
     .empty {
       color: var(--muted);
       border: 1px dashed var(--border-strong);
-      border-radius: 12px;
+      border-radius: 10px;
       padding: 18px;
-      background: rgba(15, 23, 42, 0.45);
-      margin-top: 14px;
+      background: rgba(15,23,42,0.45);
+      margin-top: 12px;
+      font-size: 13px;
     }
 
-    a {
-      color: var(--blue-soft);
-    }
+    a { color: var(--blue-soft); }
+    ul { padding-left: 18px; }
 
-    ul {
-      padding-left: 18px;
+    /* ══════════════════════════════════════════════════════
+       NEW: Price Prediction Section
+    ══════════════════════════════════════════════════════ */
+    .prediction-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      margin-top: 18px;
     }
+    .pred-metric-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0,1fr));
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .pred-metric {
+      background: var(--panel-soft);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+    }
+    .pred-metric .label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 4px;
+      font-family: var(--font-mono);
+    }
+    .pred-metric .value {
+      font-size: 18px;
+      font-weight: 700;
+      font-family: var(--font-mono);
+    }
+    .pred-metric .value.up { color: var(--green-soft); }
+    .pred-metric .value.down { color: var(--red-soft); }
+    .pred-metric .value.flat { color: var(--amber-soft); }
 
-    .method-list {
+    .trend-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: 999px;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+    .trend-badge.up { background: rgba(34,197,94,0.15); color: var(--green-soft); border: 1px solid rgba(34,197,94,0.3); }
+    .trend-badge.down { background: rgba(249,115,22,0.15); color: var(--red-soft); border: 1px solid rgba(249,115,22,0.3); }
+    .trend-badge.flat { background: rgba(245,158,11,0.15); color: var(--amber-soft); border: 1px solid rgba(245,158,11,0.3); }
+
+    .explanation-box {
+      background: rgba(15,23,42,0.6);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+      font-size: 13px;
+      color: #a8bbd4;
       line-height: 1.7;
     }
 
-    @media (max-width: 920px) {
+    /* Mini sparkline chart */
+    .chart-wrap {
+      width: 100%;
+      height: 160px;
+      position: relative;
+      margin-bottom: 12px;
+    }
+    canvas.sparkline { width: 100% !important; height: 100% !important; }
+
+    /* ══════════════════════════════════════════════════════
+       NEW: RAG / LLM Summary Section
+    ══════════════════════════════════════════════════════ */
+    .rag-section {
+      margin-top: 0;
+    }
+    .rag-controls {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    .rag-status {
+      font-size: 12px;
+      color: var(--muted);
+      font-family: var(--font-mono);
+    }
+    .rag-status.streaming { color: var(--purple); }
+    .rag-status.done { color: var(--green-soft); }
+    .rag-status.error { color: var(--red-soft); }
+
+    .llm-summary-box {
+      background: rgba(15,23,42,0.7);
+      border: 1px solid rgba(167,139,250,0.25);
+      border-radius: 14px;
+      padding: 20px 22px;
+      min-height: 80px;
+      font-size: 14px;
+      line-height: 1.8;
+      color: #d4e0f0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: var(--font-body);
+      position: relative;
+    }
+    .llm-summary-box .placeholder {
+      color: var(--muted);
+      font-size: 13px;
+      font-style: italic;
+    }
+    .llm-cursor {
+      display: inline-block;
+      width: 2px;
+      height: 1em;
+      background: var(--purple);
+      margin-left: 2px;
+      vertical-align: text-bottom;
+      animation: blink 0.9s step-end infinite;
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+
+    .rag-pipeline-steps {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    .pipeline-step {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--border-strong);
+      background: rgba(148,163,184,0.06);
+      font-size: 11px;
+      font-family: var(--font-mono);
+      color: var(--muted);
+      transition: all 0.3s;
+    }
+    .pipeline-step .step-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--border-strong);
+      transition: background 0.3s;
+    }
+    .pipeline-step.active { border-color: var(--purple); color: #d8b4fe; }
+    .pipeline-step.active .step-dot { background: var(--purple); box-shadow: 0 0 6px var(--purple); }
+    .pipeline-step.done { border-color: rgba(34,197,94,0.4); color: var(--green-soft); }
+    .pipeline-step.done .step-dot { background: var(--green); }
+
+    .arrow-sep { color: var(--border-strong); font-size: 14px; }
+
+    /* ── Responsive ── */
+    @media (max-width: 900px) {
       .comparison-grid,
       .method-grid,
-      .terms-columns {
-        grid-template-columns: 1fr;
-      }
-
-      .result-header,
-      .dimension-header {
-        flex-direction: column;
-      }
+      .terms-columns,
+      .prediction-grid { grid-template-columns: 1fr; }
+      .result-header, .dimension-header { flex-direction: column; }
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="eyebrow">CS 4300 Milestone</div>
-    <h1>StockPulse Retrieval Comparison</h1>
-    <p class="subtitle">
-      Search Reddit discussion threads using two retrieval strategies: a baseline
-      TF-IDF cosine ranker and an SVD-based latent semantic ranker. 
-    </p>
+<div class="container">
 
-    <div class="card">
-      <h2>Search the Corpus</h2>
-      <div class="controls">
-        <input id="queryInput" type="text" placeholder="Enter stock ticker here" />
-        <select id="topKSelect">
-          <option value="3">Top 3 posts</option>
-          <option value="5" selected>Top 5 posts</option>
-          <option value="8">Top 8 posts</option>
-        </select>
-        <button id="searchBtn">Run Search</button>
-      </div>
-      <p class="helper-text">
-        Example queries: <strong>NVDA</strong>, <strong>TSLA</strong>,
-        <strong>AAPL</strong>, <strong>MSFT</strong>.
+  <!-- Header -->
+  <div class="page-header">
+    <div>
+      <div class="header-logo">StockPulse</div>
+    </div>
+    <div class="header-meta">
+      <div class="eyebrow">CS 4300</div>
+      <h1>Reddit Sentiment + Price Prediction</h1>
+      <p class="subtitle">
+        Search Reddit discussions using TF-IDF and SVD retrieval, view a linear regression
+        price forecast from real market data, and get an AI-generated summary combining both signals.
       </p>
-      <div id="status" class="status"></div>
-    </div>
-
-    <div id="comparisonSection" class="comparison-grid" style="display:none;">
-      <div class="card">
-        <h2>Baseline TF-IDF</h2>
-        <p class="section-note">
-          Exact-term retrieval using TF-IDF vectors and cosine similarity in the original term space.
-        </p>
-        <div id="baselineResults"></div>
-      </div>
-
-      <div class="card">
-        <h2>SVD Retrieval</h2>
-        <p class="section-note">
-          Latent semantic retrieval using TruncatedSVD projections and cosine similarity in latent space.
-        </p>
-        <div id="svdResults"></div>
-      </div>
-    </div>
-
-    <div id="explainCard" class="card" style="display:none;">
-      <h2>SVD Explainability</h2>
-      <p id="explainSummary" class="section-note"></p>
-      <div id="statsGrid" class="summary-grid"></div>
-      <div id="dimensionGrid" class="dimension-grid"></div>
-    </div>
-
-    <div id="methodologyCard" class="card">
-      <h2>How the Retrieval Methods Work</h2>
-      <div id="methodologyContent">Loading methodology...</div>
     </div>
   </div>
 
-  <script>
-    const queryInput = document.getElementById("queryInput");
-    const topKSelect = document.getElementById("topKSelect");
-    const searchBtn = document.getElementById("searchBtn");
-    const statusDiv = document.getElementById("status");
+  <!-- ── Search Card ── -->
+  <div class="card">
+    <div class="card-title"><span class="dot"></span> Search the Corpus</div>
+    <div class="controls">
+      <input id="queryInput" type="text" placeholder="Enter stock ticker (e.g. NVDA, TSLA, AAPL)" />
+      <select id="topKSelect">
+        <option value="3">Top 3 posts</option>
+        <option value="5" selected>Top 5 posts</option>
+        <option value="8">Top 8 posts</option>
+      </select>
+      <button id="searchBtn" class="btn btn-primary">Run IR Search</button>
+      <button id="ragBtn" class="btn btn-rag">Analyze with AI</button>
+    </div>
+    <p class="helper-text">
+      <strong>IR Search</strong> runs the retrieval-only pipeline.
+      <strong>Analyze with AI</strong> runs IR + price prediction + LLM summary together.<br/>
+      Example tickers: <strong>NVDA</strong>, <strong>TSLA</strong>, <strong>AAPL</strong>, <strong>MSFT</strong>.
+    </p>
+    <div id="status" class="status"></div>
+  </div>
 
-    const comparisonSection = document.getElementById("comparisonSection");
-    const baselineResults = document.getElementById("baselineResults");
-    const svdResults = document.getElementById("svdResults");
+  <!-- ══════════════════════════════════════════════════════
+       NEW: RAG / AI Analysis Card  (shown after ragBtn click)
+  ══════════════════════════════════════════════════════ -->
+  <div id="ragCard" class="card rag-section" style="display:none;">
+    <div class="card-title"><span class="dot purple"></span> AI Analysis — RAG Summary</div>
+    <p class="section-note">
+      The AI reads the top Reddit posts retrieved by the IR system <em>and</em> the linear
+      regression price forecast, then generates an integrated sentiment + price outlook summary.
+    </p>
 
-    const explainCard = document.getElementById("explainCard");
-    const explainSummary = document.getElementById("explainSummary");
-    const statsGrid = document.getElementById("statsGrid");
-    const dimensionGrid = document.getElementById("dimensionGrid");
-    const methodologyContent = document.getElementById("methodologyContent");
+    <!-- Pipeline progress indicator -->
+    <div class="rag-pipeline-steps">
+      <div class="pipeline-step" id="step-ir"><span class="step-dot"></span>IR Search</div>
+      <span class="arrow-sep">→</span>
+      <div class="pipeline-step" id="step-pred"><span class="step-dot"></span>Price Prediction</div>
+      <span class="arrow-sep">→</span>
+      <div class="pipeline-step" id="step-llm"><span class="step-dot"></span>LLM Summary</div>
+      <span class="arrow-sep">→</span>
+      <div class="pipeline-step" id="step-done"><span class="step-dot"></span>Done</div>
+    </div>
 
-    function escapeHtml(value) {
-      return String(value ?? "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#39;");
-    }
+    <div id="ragStatusLine" class="rag-status" style="margin-bottom:12px;"></div>
 
-    function formatNumber(value) {
-      const number = Number(value);
-      if (Number.isNaN(number)) {
-        return "N/A";
-      }
-      return number.toFixed(4);
-    }
+    <div class="llm-summary-box" id="llmSummaryBox">
+      <span class="placeholder">AI summary will appear here after clicking "Analyze with AI"…</span>
+    </div>
+  </div>
 
-    function setStatus(message, type = "loading") {
-      statusDiv.className = `status ${type}`;
-      statusDiv.textContent = message;
-    }
+  <div id="predCard" class="card" style="display:none;">
+    <div class="card-title"><span class="dot teal"></span> Linear Regression Price Forecast</div>
+    <p class="section-note">
+      1 year of daily closing prices is fetched from Yahoo Finance. Ordinary Least Squares (OLS) linear
+      regression is fitted to find the best-fit trend line, then projected 30 and 90 trading days forward.
+      R² measures how well the straight line fits the historical data (0 = no fit, 1 = perfect fit).
+    </p>
 
-    function emptyState(message) {
-      return `<div class="empty">${escapeHtml(message)}</div>`;
-    }
+    <div id="predContent"></div>
+  </div>
 
-    function metadataLine(result) {
-      const bits = [
-        `Similarity: ${formatNumber(result.similarity)}`,
-        result.score !== undefined ? `Reddit score: ${escapeHtml(result.score)}` : "",
-        result.comms_num !== undefined ? `Comments: ${escapeHtml(result.comms_num)}` : "",
-        result.tag ? `Tag: ${escapeHtml(result.tag)}` : "",
-        result.datetime ? `Date: ${escapeHtml(result.datetime)}` : "",
-      ].filter(Boolean);
+  <!-- ── IR Comparison Grid (EXISTING — unchanged) ── -->
+  <div id="comparisonSection" class="comparison-grid" style="display:none;">
+    <div class="card">
+      <div class="card-title"><span class="dot"></span> Baseline TF-IDF</div>
+      <p class="section-note">
+        Exact-term retrieval using TF-IDF vectors and cosine similarity in the original term space.
+      </p>
+      <div id="baselineResults"></div>
+    </div>
 
-      return bits.join(" | ");
-    }
+    <div class="card">
+      <div class="card-title"><span class="dot green"></span> SVD Retrieval</div>
+      <p class="section-note">
+        Latent semantic retrieval using TruncatedSVD projections and cosine similarity in latent space.
+      </p>
+      <div id="svdResults"></div>
+    </div>
+  </div>
 
-    function alignmentChips(result) {
-      const dimensions = result.aligned_dimensions || [];
-      if (!dimensions.length) {
-        return "";
-      }
+  <!-- ── SVD Explainability Card (EXISTING — unchanged) ── -->
+  <div id="explainCard" class="card" style="display:none;">
+    <div class="card-title"><span class="dot amber"></span> SVD Explainability</div>
+    <p id="explainSummary" class="section-note"></p>
+    <div id="statsGrid" class="summary-grid"></div>
+    <div id="dimensionGrid" class="dimension-grid"></div>
+  </div>
 
-      return `
-        <div class="chip-row">
-          ${dimensions.map((dimension) => `
-            <span class="chip">
-              D${escapeHtml(dimension.dimension)} | ${escapeHtml(dimension.short_label)} | ${formatNumber(dimension.alignment)}
-            </span>
-          `).join("")}
+  <!-- ── Methodology Card (EXISTING — unchanged) ── -->
+  <div id="methodologyCard" class="card">
+    <div class="card-title"><span class="dot"></span> How the Retrieval Methods Work</div>
+    <div id="methodologyContent">Loading methodology…</div>
+  </div>
+
+</div><!-- /container -->
+
+<script>
+//helpers
+function escapeHtml(v) {
+  return String(v ?? "")
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+}
+function fmt4(v) {
+  const n = Number(v); return isNaN(n) ? "N/A" : n.toFixed(4);
+}
+function fmt2(v) {
+  const n = Number(v); return isNaN(n) ? "N/A" : n.toFixed(2);
+}
+function fmtPct(v) {
+  const n = Number(v); if (isNaN(n)) return "N/A";
+  return (n >= 0 ? "+" : "") + n.toFixed(1) + "%";
+}
+
+const queryInput   = document.getElementById("queryInput");
+const topKSelect   = document.getElementById("topKSelect");
+const searchBtn    = document.getElementById("searchBtn");
+const ragBtn       = document.getElementById("ragBtn");
+const statusDiv    = document.getElementById("status");
+
+const comparisonSection = document.getElementById("comparisonSection");
+const baselineResults   = document.getElementById("baselineResults");
+const svdResults        = document.getElementById("svdResults");
+const explainCard       = document.getElementById("explainCard");
+const explainSummary    = document.getElementById("explainSummary");
+const statsGrid         = document.getElementById("statsGrid");
+const dimensionGrid     = document.getElementById("dimensionGrid");
+const methodologyContent= document.getElementById("methodologyContent");
+
+const ragCard       = document.getElementById("ragCard");
+const predCard      = document.getElementById("predCard");
+const predContent   = document.getElementById("predContent");
+const llmSummaryBox = document.getElementById("llmSummaryBox");
+const ragStatusLine = document.getElementById("ragStatusLine");
+
+function setStatus(msg, type="loading") {
+  statusDiv.className = `status ${type}`;
+  statusDiv.textContent = msg;
+}
+
+// ir rendering
+function emptyState(msg) { return `<div class="empty">${escapeHtml(msg)}</div>`; }
+
+function metadataLine(r) {
+  return [
+    `Similarity: ${fmt4(r.similarity)}`,
+    r.score !== undefined ? `Reddit score: ${escapeHtml(r.score)}` : "",
+    r.comms_num !== undefined ? `Comments: ${escapeHtml(r.comms_num)}` : "",
+    r.tag  ? `Tag: ${escapeHtml(r.tag)}` : "",
+    r.datetime ? `Date: ${escapeHtml(r.datetime)}` : "",
+  ].filter(Boolean).join(" | ");
+}
+
+function alignmentChips(r) {
+  const dims = r.aligned_dimensions || [];
+  if (!dims.length) return "";
+  return `<div class="chip-row">${dims.map(d =>
+    `<span class="chip">D${escapeHtml(d.dimension)} | ${escapeHtml(d.short_label)} | ${fmt4(d.alignment)}</span>`
+  ).join("")}</div>`;
+}
+
+function resultCard(r) {
+  const title   = escapeHtml(r.title || "(No title)");
+  const preview = escapeHtml(r.preview || "");
+  const url = r.url
+    ? `<a href="${escapeHtml(r.url)}" target="_blank" rel="noopener noreferrer">Open source post</a>`
+    : "";
+  return `
+    <div class="result">
+      <div class="result-header">
+        <div class="result-title">${title}</div>
+        <div class="score-pill">#${escapeHtml(r.rank)} · ${fmt4(r.similarity)}</div>
+      </div>
+      <div class="preview">${preview}</div>
+      <div class="meta-line">${escapeHtml(metadataLine(r))}</div>
+      ${alignmentChips(r)}
+      ${url ? `<div class="meta-line" style="margin-top:8px;">${url}</div>` : ""}
+    </div>`;
+}
+
+function renderResults(container, results, emptyMsg) {
+  if (!results || !results.length) { container.innerHTML = emptyState(emptyMsg); return; }
+  container.innerHTML = `<div class="results-list">${results.map(resultCard).join("")}</div>`;
+}
+
+function metricCard(label, value) {
+  return `<div class="summary-metric">
+    <div class="metric-label">${escapeHtml(label)}</div>
+    <div class="metric-value">${escapeHtml(value)}</div>
+  </div>`;
+}
+
+function termChips(terms) {
+  return `<div class="chip-row">${(terms||[]).map(t=>`<span class="chip">${escapeHtml(t)}</span>`).join("")}</div>`;
+}
+
+function dimensionCard(d) {
+  const tagClass = d.query_pole === "negative" ? "dimension-tag negative" : "dimension-tag";
+  return `
+    <div class="dimension-card">
+      <div class="dimension-header">
+        <div>
+          <h3>D${escapeHtml(d.dimension)}: ${escapeHtml(d.short_label)}</h3>
+          <p class="dimension-note">${escapeHtml(d.interpretation)}</p>
         </div>
-      `;
-    }
+        <div class="${tagClass}">${escapeHtml(d.query_pole)} ${fmt4(d.query_strength)}</div>
+      </div>
+      <div class="terms-columns">
+        <div class="terms-box"><div class="terms-label">Active Side</div>${termChips(d.active_terms)}</div>
+        <div class="terms-box"><div class="terms-label">Opposite Side</div>${termChips(d.opposing_terms)}</div>
+      </div>
+    </div>`;
+}
 
-    function resultCard(result) {
-      const title = escapeHtml(result.title || "(No title)");
-      const preview = escapeHtml(result.preview || "");
-      const url = result.url
-        ? `<a href="${escapeHtml(result.url)}" target="_blank" rel="noopener noreferrer">Open source post</a>`
-        : "";
+function renderExplainability(payload) {
+  const expl  = payload.svd_explainability || {};
+  const stats = payload.stats || {};
+  explainCard.style.display = "block";
+  explainSummary.textContent = expl.summary || "";
+  statsGrid.innerHTML = [
+    metricCard("Documents", stats.document_count ?? "N/A"),
+    metricCard("Vocabulary", stats.vocabulary_size ?? "N/A"),
+    metricCard("SVD Components", stats.svd_components ?? "N/A"),
+    metricCard("Search Field", stats.search_field ?? "N/A"),
+  ].join("");
+  const dims = expl.important_dimensions || [];
+  dimensionGrid.innerHTML = dims.length
+    ? dims.map(dimensionCard).join("")
+    : emptyState("No SVD dimensions available for this query.");
+}
 
-      return `
-        <div class="result">
-          <div class="result-header">
-            <div class="result-title">${title}</div>
-            <div class="score-pill">#${escapeHtml(result.rank)} · ${formatNumber(result.similarity)}</div>
-          </div>
-          <div class="preview">${preview}</div>
-          <div class="meta-line">${escapeHtml(metadataLine(result))}</div>
-          ${alignmentChips(result)}
-          ${url ? `<div class="meta-line" style="margin-top:10px;">${url}</div>` : ""}
-        </div>
-      `;
-    }
+function renderMethodology(m) {
+  const sections = ["baseline","svd","explainability"];
+  methodologyContent.innerHTML = `<div class="method-grid">${sections.map(s=>`
+    <div class="summary-metric">
+      <h3>${escapeHtml(s.toUpperCase())}</h3>
+      <p class="section-note">${escapeHtml(m[s].summary)}</p>
+      <ul class="method-list">${(m[s].details||[]).map(i=>`<li>${escapeHtml(i)}</li>`).join("")}</ul>
+    </div>`).join("")}</div>`;
+}
 
-    function renderResults(container, results, emptyMessage) {
-      if (!results || !results.length) {
-        container.innerHTML = emptyState(emptyMessage);
-        return;
-      }
+async function loadMethodology() {
+  try {
+    const res  = await fetch("/api/stock/methodology");
+    const data = await res.json();
+    if (!res.ok) { methodologyContent.innerHTML = emptyState(data.error || "Failed to load."); return; }
+    renderMethodology(data);
+  } catch { methodologyContent.innerHTML = emptyState("Failed to load methodology."); }
+}
 
-      container.innerHTML = `<div class="results-list">${results.map(resultCard).join("")}</div>`;
-    }
+// price prediction rendering
+function renderPrediction(pred) {
+  predCard.style.display = "block";
 
-    function metricCard(label, value) {
-      return `
-        <div class="summary-metric">
-          <div class="metric-label">${escapeHtml(label)}</div>
-          <div class="metric-value">${escapeHtml(value)}</div>
-        </div>
-      `;
-    }
+  if (pred.error) {
+    predContent.innerHTML = `<div class="empty">${escapeHtml(pred.error)}</div>`;
+    return;
+  }
 
-    function termChips(terms) {
-      return `
-        <div class="chip-row">
-          ${(terms || []).map((term) => `<span class="chip">${escapeHtml(term)}</span>`).join("")}
-        </div>
-      `;
-    }
+  const dir = pred.trend_direction;
+  const dirClass = dir === "upward" ? "up" : dir === "downward" ? "down" : "flat";
+  const dirEmoji = dir === "upward" ? "▲" : dir === "downward" ? "▼" : "→";
 
-    function dimensionCard(dimension) {
-      const tagClass = dimension.query_pole === "negative" ? "dimension-tag negative" : "dimension-tag";
+  const r2Class  = pred.r_squared > 0.7 ? "green" : pred.r_squared > 0.4 ? "flat" : "red";
+  const p30Class = pred.pct_change_30d >= 0 ? "up" : "down";
+  const p90Class = pred.pct_change_90d >= 0 ? "up" : "down";
 
-      return `
-        <div class="dimension-card">
-          <div class="dimension-header">
-            <div>
-              <h3>D${escapeHtml(dimension.dimension)}: ${escapeHtml(dimension.short_label)}</h3>
-              <p class="dimension-note">${escapeHtml(dimension.interpretation)}</p>
-            </div>
-            <div class="${tagClass}">
-              ${escapeHtml(dimension.query_pole)} ${formatNumber(dimension.query_strength)}
-            </div>
-          </div>
-          <div class="terms-columns">
-            <div class="terms-box">
-              <div class="terms-label">Active Side</div>
-              ${termChips(dimension.active_terms)}
-            </div>
-            <div class="terms-box">
-              <div class="terms-label">Opposite Side</div>
-              ${termChips(dimension.opposing_terms)}
-            </div>
-          </div>
-        </div>
-      `;
-    }
+  predContent.innerHTML = `
+    <div class="trend-badge ${dirClass}">
+      ${dirEmoji} ${escapeHtml(pred.trend_strength.toUpperCase())} ${escapeHtml(dir.toUpperCase())} TREND
+    </div>
 
-    function renderExplainability(payload) {
-      const explainability = payload.svd_explainability || {};
-      const stats = payload.stats || {};
+    <div class="pred-metric-grid">
+      <div class="pred-metric">
+        <div class="label">Last Close</div>
+        <div class="value">$${fmt2(pred.last_price)}</div>
+      </div>
+      <div class="pred-metric">
+        <div class="label">R² (fit quality)</div>
+        <div class="value ${r2Class}">${fmt4(pred.r_squared)}</div>
+      </div>
+      <div class="pred-metric">
+        <div class="label">30-Day Forecast</div>
+        <div class="value ${p30Class}">$${fmt2(pred.predicted_price_30d)} <small style="font-size:12px;">(${fmtPct(pred.pct_change_30d)})</small></div>
+      </div>
+      <div class="pred-metric">
+        <div class="label">90-Day Forecast</div>
+        <div class="value ${p90Class}">$${fmt2(pred.predicted_price_90d)} <small style="font-size:12px;">(${fmtPct(pred.pct_change_90d)})</small></div>
+      </div>
+      <div class="pred-metric">
+        <div class="label">Slope / Day</div>
+        <div class="value">${pred.slope >= 0 ? "+" : ""}${pred.slope}</div>
+      </div>
+      <div class="pred-metric">
+        <div class="label">Trading Days</div>
+        <div class="value muted">${escapeHtml(pred.trading_days_used)}</div>
+      </div>
+    </div>
 
-      explainCard.style.display = "block";
-      explainSummary.textContent = explainability.summary || "";
+    <div class="chart-wrap">
+      <canvas id="sparklineCanvas" class="sparkline"></canvas>
+    </div>
 
-      statsGrid.innerHTML = [
-        metricCard("Documents", stats.document_count ?? "N/A"),
-        metricCard("Vocabulary", stats.vocabulary_size ?? "N/A"),
-        metricCard("SVD Components", stats.svd_components ?? "N/A"),
-        metricCard("Search Field", stats.search_field ?? "N/A"),
-      ].join("");
+    <div class="explanation-box">${escapeHtml(pred.explanation)}</div>
+  `;
 
-      const dimensions = explainability.important_dimensions || [];
-      if (!dimensions.length) {
-        dimensionGrid.innerHTML = emptyState("No SVD dimensions were available for this query.");
-        return;
-      }
+  // Draw sparkline with regression overlay
+  drawSparkline(pred);
+}
 
-      dimensionGrid.innerHTML = dimensions.map(dimensionCard).join("");
-    }
+function drawSparkline(pred) {
+  const canvas = document.getElementById("sparklineCanvas");
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
 
-    function renderMethodology(methodology) {
-      const sections = ["baseline", "svd", "explainability"];
+  // Set actual pixel dimensions
+  canvas.width  = canvas.offsetWidth  || 600;
+  canvas.height = canvas.offsetHeight || 160;
+  const W = canvas.width, H = canvas.height;
 
-      methodologyContent.innerHTML = `
-        <div class="method-grid">
-          ${sections.map((section) => `
-            <div class="summary-metric">
-              <h3>${escapeHtml(section.toUpperCase())}</h3>
-              <p class="section-note">${escapeHtml(methodology[section].summary)}</p>
-              <ul class="method-list">
-                ${(methodology[section].details || []).map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
-              </ul>
-            </div>
-          `).join("")}
-        </div>
-      `;
-    }
+  const history = pred.history || [];
+  if (!history.length) return;
 
-    async function loadMethodology() {
-      try {
-        const response = await fetch("/api/stock/methodology");
-        const data = await response.json();
+  const prices = history.map(h => h.close);
+  const minP = Math.min(...prices) * 0.99;
+  const maxP = Math.max(...prices) * 1.01;
 
-        if (!response.ok) {
-          methodologyContent.innerHTML = emptyState(data.error || "Failed to load methodology.");
-          return;
-        }
+  function toX(i, total) { return (i / (total - 1)) * W; }
+  function toY(p) { return H - ((p - minP) / (maxP - minP)) * (H * 0.85) - H * 0.05; }
 
-        renderMethodology(data);
-      } catch (error) {
-        methodologyContent.innerHTML = emptyState("Failed to load methodology.");
-      }
-    }
+  // Background
+  ctx.clearRect(0, 0, W, H);
 
-    async function runSearch() {
-      const query = queryInput.value.trim();
-      const topK = Number.parseInt(topKSelect.value, 10);
+  // Gradient fill under price line
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, "rgba(59,130,246,0.22)");
+  grad.addColorStop(1, "rgba(59,130,246,0)");
+  ctx.beginPath();
+  ctx.moveTo(toX(0, prices.length), toY(prices[0]));
+  prices.forEach((p, i) => ctx.lineTo(toX(i, prices.length), toY(p)));
+  ctx.lineTo(toX(prices.length - 1, prices.length), H);
+  ctx.lineTo(0, H);
+  ctx.closePath();
+  ctx.fillStyle = grad;
+  ctx.fill();
 
-      if (!query) {
-        setStatus("Please enter a ticker or stock query.", "error");
-        return;
-      }
+  // Price line
+  ctx.beginPath();
+  ctx.strokeStyle = "#60a5fa";
+  ctx.lineWidth = 2;
+  prices.forEach((p, i) => {
+    const x = toX(i, prices.length), y = toY(p);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.stroke();
 
-      setStatus(`Searching for "${query}"...`, "loading");
-      comparisonSection.style.display = "none";
-      explainCard.style.display = "none";
+  // Regression line (just over the historical range)
+  const n = prices.length;
+  const x0 = 0, y0 = toY(pred.intercept);
+  const xN = toX(n - 1, n), yN = toY(pred.intercept + pred.slope * (n - 1));
+  ctx.beginPath();
+  ctx.strokeStyle = pred.trend_direction === "upward" ? "#86efac"
+                  : pred.trend_direction === "downward" ? "#fdba74" : "#fde68a";
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([5, 4]);
+  ctx.moveTo(x0, y0);
+  ctx.lineTo(xN, yN);
+  ctx.stroke();
+  ctx.setLineDash([]);
 
-      try {
-        const response = await fetch("/api/stock/search", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            query,
-            top_k: topK,
-          }),
-        });
+  // Labels
+  ctx.fillStyle = "#94a3b8";
+  ctx.font = "10px 'Space Mono', monospace";
+  ctx.fillText(`$${fmt2(prices[0])}`, 4, toY(prices[0]) - 4);
+  ctx.fillText(`$${fmt2(prices[prices.length - 1])}`, W - 56, toY(prices[prices.length - 1]) - 4);
+}
 
-        const data = await response.json();
+// pipeline helpers
+function resetPipelineSteps() {
+  ["step-ir","step-pred","step-llm","step-done"].forEach(id => {
+    const el = document.getElementById(id);
+    el.className = "pipeline-step";
+  });
+}
+function setStep(id, state) {
+  const el = document.getElementById(id);
+  el.className = `pipeline-step ${state}`;
+}
+function setRagStatus(msg, type="") {
+  ragStatusLine.className = `rag-status ${type}`;
+  ragStatusLine.textContent = msg;
+}
 
-        if (!response.ok) {
-          setStatus(data.error || "Search failed.", "error");
-          return;
-        }
+// ir system
+async function runSearch() {
+  const query = queryInput.value.trim();
+  const topK  = parseInt(topKSelect.value, 10);
+  if (!query) { setStatus("Please enter a ticker or stock query.", "error"); return; }
 
-        comparisonSection.style.display = "grid";
-        renderResults(
-          baselineResults,
-          data.baseline_results,
-          "No baseline matches were returned for this query."
-        );
-        renderResults(
-          svdResults,
-          data.svd_results,
-          "No SVD matches were returned for this query."
-        );
-        renderExplainability(data);
-        setStatus(`Loaded retrieval comparison for "${query}".`, "loading");
-      } catch (error) {
-        setStatus("Failed to run the search request.", "error");
-      }
-    }
+  setStatus(`Searching for "${query}"…`, "loading");
+  comparisonSection.style.display = "none";
+  explainCard.style.display = "none";
+  predCard.style.display = "none";
+  ragCard.style.display = "none";
+  llmSummaryBox.innerHTML = `<span class="placeholder">AI summary will appear here after clicking "Analyze with AI"…</span>`;
+  resetPipelineSteps();
+  setRagStatus("");
 
-    searchBtn.addEventListener("click", runSearch);
-    queryInput.addEventListener("keydown", (event) => {
-      if (event.key === "Enter") {
-        event.preventDefault();
-        runSearch();
-      }
+  try {
+    const res  = await fetch("/api/stock/search", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query, top_k: topK }),
+    });
+    const data = await res.json();
+    if (!res.ok) { setStatus(data.error || "Search failed.", "error"); return; }
+
+    comparisonSection.style.display = "grid";
+    renderResults(baselineResults, data.baseline_results, "No baseline matches.");
+    renderResults(svdResults, data.svd_results, "No SVD matches.");
+    renderExplainability(data);
+    setStatus(`Loaded retrieval comparison for "${query}".`, "success");
+
+    // Also fetch the price prediction quietly when running IR search
+    fetchAndRenderPrediction(query);
+  } catch {
+    setStatus("Failed to run the search request.", "error");
+  }
+}
+
+async function fetchAndRenderPrediction(ticker) {
+  try {
+    const res  = await fetch(`/api/stock/predict?ticker=${encodeURIComponent(ticker)}`);
+    const data = await res.json();
+    renderPrediction(data);
+  } catch (e) {
+    predCard.style.display = "block";
+    predContent.innerHTML = `<div class="empty">Price prediction failed: ${escapeHtml(String(e))}</div>`;
+  }
+}
+
+//rag anaylsis and ai
+async function runRagAnalysis() {
+  const query = queryInput.value.trim();
+  const topK  = parseInt(topKSelect.value, 10);
+  if (!query) { setStatus("Please enter a ticker or stock query.", "error"); return; }
+
+  // Show RAG card, reset UI
+  ragCard.style.display = "block";
+  predCard.style.display = "none";
+  comparisonSection.style.display = "none";
+  explainCard.style.display = "none";
+  llmSummaryBox.innerHTML = `<span class="llm-cursor"></span>`;
+  resetPipelineSteps();
+  setRagStatus("Starting analysis…");
+  setStatus(`Running full analysis for "${query}"…`, "loading");
+  ragBtn.disabled = true;
+  searchBtn.disabled = true;
+
+  let llmText = "";
+  let cursorEl = null;
+
+  try {
+    const res = await fetch("/api/rag/analyze", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query, top_k: topK }),
     });
 
-    loadMethodology();
-  </script>
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `HTTP ${res.status}`);
+    }
+
+    const reader  = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    setStep("step-ir", "active");
+    setRagStatus("Running IR search…", "streaming");
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop();
+
+      for (const line of lines) {
+        if (!line.startsWith("data: ")) continue;
+        let msg;
+        try { msg = JSON.parse(line.slice(6)); } catch { continue; }
+
+        if (msg.type === "ir_results") {
+          setStep("step-ir", "done");
+          setStep("step-pred", "active");
+          setRagStatus("Fetching price prediction…", "streaming");
+
+          // Render IR results
+          const payload = msg.payload;
+          comparisonSection.style.display = "grid";
+          renderResults(baselineResults, payload.baseline_results, "No baseline matches.");
+          renderResults(svdResults, payload.svd_results, "No SVD matches.");
+          renderExplainability(payload);
+        }
+
+        if (msg.type === "prediction") {
+          setStep("step-pred", "done");
+          setStep("step-llm", "active");
+          setRagStatus("Generating LLM summary…", "streaming");
+          renderPrediction(msg.payload);
+
+          // Prime the summary box for streaming text
+          llmText = "";
+          llmSummaryBox.innerHTML = `<span class="llm-cursor" id="liveCursor"></span>`;
+          cursorEl = document.getElementById("liveCursor");
+        }
+
+        if (msg.type === "llm_chunk") {
+          llmText += msg.content;
+          if (cursorEl) {
+            llmSummaryBox.textContent = llmText;
+            llmSummaryBox.appendChild(cursorEl);
+          } else {
+            llmSummaryBox.textContent = llmText;
+          }
+        }
+
+        if (msg.type === "done") {
+          setStep("step-llm", "done");
+          setStep("step-done", "done");
+          setRagStatus("Analysis complete.", "done");
+          setStatus(`Analysis complete for "${query}".`, "success");
+          // Remove cursor
+          llmSummaryBox.textContent = llmText;
+        }
+
+        if (msg.type === "error") {
+          setRagStatus(`Error: ${msg.message}`, "error");
+          setStatus("Analysis encountered an error.", "error");
+        }
+      }
+    }
+  } catch (err) {
+    setRagStatus(`Failed: ${err.message}`, "error");
+    setStatus("RAG analysis failed.", "error");
+    llmSummaryBox.innerHTML = `<span class="placeholder">Analysis failed. Check that SPARK_API_KEY is set in your .env and the server is running.</span>`;
+  } finally {
+    ragBtn.disabled = false;
+    searchBtn.disabled = false;
+  }
+}
+
+//listeners
+searchBtn.addEventListener("click", runSearch);
+ragBtn.addEventListener("click", runRagAnalysis);
+queryInput.addEventListener("keydown", e => {
+  if (e.key === "Enter") { e.preventDefault(); runSearch(); }
+});
+
+loadMethodology();
+</script>
 </body>
 </html>
