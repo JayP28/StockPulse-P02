@@ -289,9 +289,7 @@
     a { color: var(--blue-soft); }
     ul { padding-left: 18px; }
 
-    /* ══════════════════════════════════════════════════════
-       NEW: Price Prediction Section
-    ══════════════════════════════════════════════════════ */
+    
     .prediction-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -361,9 +359,6 @@
     }
     canvas.sparkline { width: 100% !important; height: 100% !important; }
 
-    /* ══════════════════════════════════════════════════════
-       NEW: RAG / LLM Summary Section
-    ══════════════════════════════════════════════════════ */
     .rag-section {
       margin-top: 0;
     }
@@ -488,16 +483,14 @@
       <button id="ragBtn" class="btn btn-rag">Analyze with AI</button>
     </div>
     <p class="helper-text">
-      <strong>IR Search</strong> runs the retrieval-only pipeline.
+      <strong>IR Search</strong> runs the retrieval-only pipeline + price prediction.
       <strong>Analyze with AI</strong> runs IR + price prediction + LLM summary together.<br/>
       Example tickers: <strong>NVDA</strong>, <strong>TSLA</strong>, <strong>AAPL</strong>, <strong>MSFT</strong>.
     </p>
     <div id="status" class="status"></div>
   </div>
 
-  <!-- ══════════════════════════════════════════════════════
-       NEW: RAG / AI Analysis Card  (shown after ragBtn click)
-  ══════════════════════════════════════════════════════ -->
+
   <div id="ragCard" class="card rag-section" style="display:none;">
     <div class="card-title"><span class="dot purple"></span> AI Analysis — RAG Summary</div>
     <p class="section-note">
